@@ -7,7 +7,7 @@ import sys
 #sys.stdout = open('EGFR.html', 'w')
 #sys.stdout = open('simple.html', 'w')
 sys.stdout = open('models.html', 'w')
-
+#sys.stdout = open('models1.html', 'w')
 
 from typing import TYPE_CHECKING
 
