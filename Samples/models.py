@@ -1,7 +1,7 @@
 # diagrams for 2 models
 
 
-add('Syk species - Syk(tSH2,l~Y,a~Y)',
+add('Syk species - Syk(tSH2, l~Y, a~Y)',
     Diagram(
     "Syk(",
     Choice(0, Comment("    "), 'tSH2'
@@ -73,7 +73,7 @@ add('goes to Rec(b~Y)',
     ))
 
 
-add('MAP3K molecule - MAP3K(s,S~I~A)',
+add('MAP3K molecule - MAP3K(s, S~I~A)',
     Diagram(
     "Map3K(",
     Choice(0, Comment("    "),'s'),
@@ -85,7 +85,7 @@ add('MAP3K molecule - MAP3K(s,S~I~A)',
 )
 )
 
-add('MAP3K species - MAP3K(s,S~I)',
+add('MAP3K species - MAP3K(s, S~I)',
     Diagram(
     "Map3K(",
     Choice(0, Comment("    "),'s'),

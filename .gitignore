@@ -5,4 +5,4 @@ secrets.json
 *.pyc
 /dist
 /build
-test.html
+#test.html
