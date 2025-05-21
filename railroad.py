@@ -4,9 +4,10 @@ from __future__ import annotations
 import math as Math
 import sys
 
-sys.stdout = open('Samples/test.html', 'w')
+#sys.stdout = open('Samples/test.html', 'w')
 #sys.stdout = open('Samples/simple.html', 'w')
 #sys.stdout = open('Samples/models.html', 'w')
+sys.stdout = open('multiple_molecule_species.html', 'w')
 
 
 from typing import TYPE_CHECKING
@@ -2324,15 +2325,20 @@ if __name__ == "__main__":
     		"""
         )
 
-
+    '''
     with open("Samples/test.py", "r", encoding="utf-8") as fh:
         exec(fh.read())  # pylint: disable=exec-used
     sys.stdout.write("</body></html>")
 
-    #with open("Samples/simple.py", "r", encoding="utf-8") as fh:
-    #   exec(fh.read())  # pylint: disable=exec-used
-    #sys.stdout.write("</body></html>")
+    with open("Samples/simple.py", "r", encoding="utf-8") as fh:
+       exec(fh.read())  # pylint: disable=exec-used
+    sys.stdout.write("</body></html>")
 
-    #with open("Samples/models.py", "r", encoding="utf-8") as fh:
-    #    exec(fh.read())  # pylint: disable=exec-used
-    #sys.stdout.write("</body></html>")
+    with open("Samples/models.py", "r", encoding="utf-8") as fh:
+        exec(fh.read())  # pylint: disable=exec-used
+    sys.stdout.write("</body></html>")
+    '''
+
+    with open("multiple_molecule_species.py", "r", encoding="utf-8") as fh:
+        exec(fh.read())  # pylint: disable=exec-used
+    sys.stdout.write("</body></html>")

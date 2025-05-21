@@ -1,0 +1,150 @@
+Diagram(
+   'MAP2K(',
+    Choice(0, Comment("                                "), 's'),
+    Choice(0, Comment("                                "), 
+           Sequence('R1',
+                    Choice(0, Comment("                "), '~Y')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('R2',
+                    Choice(0, Comment("                "), '~Y')
+           )),
+    ')',
+)
+Diagram(
+   'M1R(',
+    Choice(0, Comment("                                "), 'L'),
+    Choice(0, Comment("                                "), 
+           Sequence('S228',
+                    Choice(0, Comment("                "), '~u')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('S273',
+                    Choice(0, Comment("                "), '~u')
+           )),
+    Choice(0, Comment("                                "), 'Arr'),
+    Choice(0, Comment("                                "), 'GRK'),
+    Choice(0, Comment("                                "), 'PP1'),
+    Choice(0, Comment("                                "), 'CK2'),
+    ')',
+)
+Diagram(
+   'Oxo(',
+    Choice(0, Comment("                                "), 
+           Sequence('R',
+                    Choice(0, Comment("                "), '!1')
+           )),
+    ')',
+    '.',
+   'M1R(',
+    Choice(0, Comment("                                "), 
+           Sequence('L',
+                    Choice(0, Comment("                "), '!1')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('S228',
+                    Choice(0, Comment("                "), '~u')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('S273',
+                    Choice(0, Comment("                "), '~u')
+           )),
+    Choice(0, Comment("                                "), 'Arr'),
+    Choice(0, Comment("                                "), 'GRK'),
+    Choice(0, Comment("                                "), 'PP1'),
+    Choice(0, Comment("                                "), 'CK2'),
+    ')',
+)
+Diagram(
+   'Oxo(',
+    Choice(0, Comment("                                "), 
+           Sequence('R',
+                    Choice(0, Comment("                "), '!1')
+           )),
+    ')',
+    '.',
+   'M1R(',
+    Choice(0, Comment("                                "), 
+           Sequence('L',
+                    Choice(0, Comment("                "), '!1')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('S228',
+                    Choice(0, Comment("                "), '~p')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('S273',
+                    Choice(0, Comment("                "), '~p')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('Arr',
+                    Choice(0, Comment("                "), '!2')
+           )),
+    Choice(0, Comment("                                "), 'GRK'),
+    Choice(0, Comment("                                "), 'PP1'),
+    Choice(0, Comment("                                "), 'CK2'),
+    ')',
+    '.',
+   'Arrestin(',
+    Choice(0, Comment("                                "), 
+           Sequence('RLP',
+                    Choice(0, Comment("                "), '!2')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('MEK',
+                    Choice(0, Comment("                "), '!3')
+           )),
+    Choice(0, Comment("                                "), 'PP2A'),
+    ')',
+    '.',
+   'MEK(',
+    Choice(0, Comment("                                "), 
+           Sequence('Arr',
+                    Choice(0, Comment("                "), '!3')
+           )),
+    Choice(0, Comment("                                "), 'ERK'),
+    ')',
+)
+Diagram(
+   'Tie2(',
+    Choice(0, Comment("                                "), 'tie1bs'),
+    Choice(0, Comment("                                "), 
+           Sequence('loc',
+                    Choice(0, Comment("                "), '~sol')
+           )),
+    Choice(0, Comment("                                "), 'veptpbs'),
+    Choice(0, Comment("                                "), 
+           Sequence('pY',
+                    Choice(0, Comment("                "), '~dp')
+           )),
+    Choice(0, Comment("                                "), 'ang1bs'),
+    Choice(0, Comment("                                "), 'ang2bs'),
+    ')',
+)
+Diagram(
+   'NFkB(',
+    Choice(0, Comment("                                "), 
+           Sequence('Ikba',
+                    Choice(0, Comment("                "), '!0')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('loc',
+                    Choice(0, Comment("                "), '~cyt')
+           )),
+    ')',
+    '.',
+   'IkBa(',
+    Choice(0, Comment("                                "), 
+           Sequence('Nfkb',
+                    Choice(0, Comment("                "), '!0')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('loc',
+                    Choice(0, Comment("                "), '~cyt')
+           )),
+    Choice(0, Comment("                                "), 
+           Sequence('Ser32_Ser36',
+                    Choice(0, Comment("                "), '~0')
+           )),
+    ')',
+)
