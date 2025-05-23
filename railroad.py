@@ -4,10 +4,9 @@ from __future__ import annotations
 import math as Math
 import sys
 
-#sys.stdout = open('Samples/test.html', 'w')
-#sys.stdout = open('Samples/simple.html', 'w')
-#sys.stdout = open('Samples/models.html', 'w')
-sys.stdout = open('multiple_molecule_species.html', 'w')
+input_file = input('Python filepath: ')
+print('\nOpening .html file for writing:', input_file+'.html')
+sys.stdout = open(input_file+'.html', 'w')
 
 
 from typing import TYPE_CHECKING
@@ -275,7 +274,7 @@ def wrapString(value: Node) -> DiagramItem:
 
 DEFAULT_STYLE = """\
 	svg.railroad-diagram {
-		background-color:hsl(30,20%,95%);
+		background-color:hsl(0, 100%, 100%);
 	}
 	svg.railroad-diagram path {
 		stroke-width:3;
@@ -302,6 +301,75 @@ DEFAULT_STYLE = """\
 		stroke-dasharray: 10 5;
 		fill: none;
 	}
+
+    .red {
+    fill: red;
+    }
+
+    .green {
+    fill: green;
+    }
+
+    .yellow {
+    fill: yellow;
+    }
+
+    .blue {
+    fill: blue;
+    }
+
+    .lightblue {
+    fill: lightblue;
+    }
+
+    .skyblue {
+    fill: skyblue;
+    }
+
+    .lightgreen {
+    fill: lightgreen;
+    }
+
+    .orange {
+    fill: orange;
+    }
+
+    .pink {
+    fill: pink;
+    }
+
+    .violet {
+    fill: violet;
+    }
+
+    .coral {
+    fill: coral;
+    }
+
+    .lightsalmon {
+    fill: lightsalmon;
+    }
+
+    .plum {
+    fill: plum;
+    }
+
+    .turquoise {
+    fill: turquoise;
+    }    
+    
+
+    .railroad-diagram .triangle polygon {
+        stroke-width:3;
+		stroke:black;
+		fill:red
+}
+
+    .comment-path {
+        stroke-width:3;
+        stroke:hsl(0, 100%, 100%);
+        fill:none;
+}
 """
 
 
@@ -1043,11 +1111,10 @@ class Choice(DiagramMultiContainer):
             ).addTo(
                 self
             )
-
         # Do the straight-line path.
-        Path(x, y).right(AR * 2).addTo(self)
-        self.items[self.default].format(x + AR * 2, y, innerWidth).addTo(self)
-        Path(x + AR * 2 + innerWidth, y + self.height).right(AR * 2).addTo(self)
+        #Path(x, y).right(AR * 2).addTo(self)
+        #self.items[self.default].format(x + AR * 2, y, innerWidth).addTo(self)
+        #Path(x + AR * 2 + innerWidth, y + self.height).right(AR * 2).addTo(self)
 
         # Do the elements that curve below
         distanceFromY = 0
@@ -1083,7 +1150,7 @@ class Choice(DiagramMultiContainer):
             if itemNum <= self.default:
                 # Item above the line: round off the entry/exit lines upwards.
                 leftLines[itemTD.entry] = roundcorner_top_left
-                rightLines[itemTD.exit] = roundcorner_top_right
+                rightLines[itemTD.exit] = roundcorner_top_right 
                 if itemNum == 0:
                     # First item and above the line: also remove ascenders above the item's entry and exit, suppress the separator above it.
                     hasSeparator = False
@@ -1730,13 +1797,14 @@ class End(DiagramItem):
 
 class Terminal(DiagramItem):
     def __init__(
-        self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = ""
+        self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = "", box_color: Opt[str]=None
     ):
         DiagramItem.__init__(self, "g", {"class": " ".join(["terminal", cls])})
         self.text = text
         self.href = href
         self.title = title
         self.cls = cls
+        self.box_color = box_color
         self.width = len(text) * CHAR_WIDTH + 20
         self.up = 11
         self.down = 11
@@ -1747,25 +1815,32 @@ class Terminal(DiagramItem):
         return f"Terminal({repr(self.text)}, href={repr(self.href)}, title={repr(self.title)}, cls={repr(self.cls)})"
 
     def format(self, x: float, y: float, width: float) -> Terminal:
+        self.formatted_x = x
+        self.formatted_y = y
+        self.formatted_width = width
         leftGap, rightGap = determineGaps(width, self.width)
 
         # Hook up the two sides if self is narrower than its stated width.
         Path(x, y).h(leftGap).addTo(self)
         Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
 
-        DiagramItem(
-            "rect",
-            {
-                "x": x + leftGap,
-                "y": y - 11,
-                "width": self.width,
-                "height": self.up + self.down,
-                "rx": 10,
-                "ry": 10,
-            },
-        ).addTo(self)
+        
+        rect_attrs = {
+            "x": x + leftGap,
+            "y": y - 11,
+            "width": self.width,
+            "height": self.up + self.down,
+            "rx": AR,
+            "ry": AR,
+            }
+
+        if self.box_color is not None:
+            rect_attrs["style"] = f"fill: {self.box_color}"
+
+        DiagramItem("rect", rect_attrs).addTo(self)
+    
         text = DiagramItem(
-            "text", {"x": x + leftGap + self.width / 2, "y": y + 4}, self.text
+                "text", {"x": x + leftGap + self.width / 2, "y": y + 4}, self.text
         )
         if self.href is not None:
             a = DiagramItem("a", {"xlink:href": self.href}, text).addTo(self)
@@ -1783,13 +1858,14 @@ class Terminal(DiagramItem):
 
 class NonTerminal(DiagramItem):
     def __init__(
-        self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = ""
+        self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = "", box_color: Opt[str]=None
     ):
         DiagramItem.__init__(self, "g", {"class": " ".join(["non-terminal", cls])})
         self.text = text
         self.href = href
         self.title = title
         self.cls = cls
+        self.box_color = box_color
         self.width = len(text) * CHAR_WIDTH + 20
         self.up = 11
         self.down = 11
@@ -1800,21 +1876,26 @@ class NonTerminal(DiagramItem):
         return f"NonTerminal({repr(self.text)}, href={repr(self.href)}, title={repr(self.title)}, cls={repr(self.cls)})"
 
     def format(self, x: float, y: float, width: float) -> NonTerminal:
+        self.formatted_x = x
+        self.formatted_y = y
+        self.formatted_width = width
         leftGap, rightGap = determineGaps(width, self.width)
 
         # Hook up the two sides if self is narrower than its stated width.
         Path(x, y).h(leftGap).addTo(self)
         Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
 
-        DiagramItem(
-            "rect",
-            {
-                "x": x + leftGap,
-                "y": y - 11,
-                "width": self.width,
-                "height": self.up + self.down,
-            },
-        ).addTo(self)
+        rect_attrs = {
+            "x": x + leftGap,
+            "y": y - 11,
+            "width": self.width,
+            "height": self.up + self.down,
+            }
+
+        if self.box_color is not None:
+            rect_attrs["style"] = f"fill: {self.box_color}"
+
+        DiagramItem("rect", rect_attrs).addTo(self)
         text = DiagramItem(
             "text", {"x": x + leftGap + self.width / 2, "y": y + 4}, self.text
         )
@@ -1830,6 +1911,63 @@ class NonTerminal(DiagramItem):
     def textDiagram(self) -> TextDiagram:
         # Note: href, title, and cls are ignored for text diagrams.
         return TextDiagram.rect(self.text)
+
+# Test triangle class
+class Triangle(DiagramItem):
+    def __init__(
+        self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = ""
+    ):
+        DiagramItem.__init__(self, "g", {"class": " ".join(["triangle", cls])})
+        self.text = text
+        self.href = href
+        self.title = title
+        self.cls = cls
+        self.width = len(text) * CHAR_WIDTH + 40
+        self.up = 20
+        self.down = 20
+        self.needsSpace = True
+        addDebug(self)
+
+    def __repr__(self) -> str:
+        return f"Triangle({repr(self.text)}, href={repr(self.href)}, title={repr(self.title)}, cls={repr(self.cls)})"
+
+    def format(self, x: float, y: float, width: float) -> DiagramItem:
+        leftGap, rightGap = determineGaps(width, self.width)
+
+        Path(x, y).h(leftGap).addTo(self)
+        Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
+
+        top = y - self.up
+        bottom = y + self.down
+        middleY = y
+        points = [
+            (x + leftGap, top),
+            (x + leftGap, bottom),
+            (x + leftGap + self.width, middleY),
+        ]
+        point_str = " ".join(f"{px},{py}" for px, py in points)
+
+        DiagramItem("polygon", {"points": point_str}).addTo(self)
+
+        text = DiagramItem(
+            "text", {"x": x + leftGap + self.width / 2 -10, "y": y + 4}, self.text
+        )
+
+        if self.href is not None:
+            a = DiagramItem("a", {"xlink:href": self.href}, text).addTo(self)
+            text.addTo(a)
+        else:
+            text.addTo(self)
+        if self.title is not None:
+            DiagramItem("title", {}, self.title).addTo(self)
+
+        return self
+
+    def textDiagram(self) -> TextDiagram:
+        return TextDiagram.other(self.text)
+
+
+
 
 
 class Comment(DiagramItem):
@@ -1854,8 +1992,8 @@ class Comment(DiagramItem):
         leftGap, rightGap = determineGaps(width, self.width)
 
         # Hook up the two sides if self is narrower than its stated width.
-        Path(x, y).h(leftGap).addTo(self)
-        Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
+        #Path(x, y).h(leftGap).addTo(self)
+        #Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
 
         text = DiagramItem(
             "text",
@@ -2284,22 +2422,24 @@ class TextDiagram:
     }
 
 
+
+
 # Default to Unicode box characters, they're much prettier than raw ASCII.
 TextDiagram.setFormatting(TextDiagram.PARTS_UNICODE)
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
 
-    if len(sys.argv) < 2 or sys.argv[1] == "":
+if len(sys.argv) < 2 or sys.argv[1] == "":
         mode = "svg"
-    elif sys.argv[1].lower() in ["svg", "ascii", "unicode", "standalone"]:
+elif sys.argv[1].lower() in ["svg", "ascii", "unicode", "standalone"]:
         mode = sys.argv[1].lower()
-    else:
+else:
         raise ValueError(f"Unknown option: {sys.argv[1]}")
-    testList = sys.argv[2:]
+testList = sys.argv[2:]
 
-    def add(name: str, diagram: DiagramItem) -> None:
+def add(name: str, diagram: DiagramItem) -> None:
         if name in testList or len(testList) == 0:
-            sys.stdout.write(f"\n<h1>{escapeHtml(name)}</h1>\n")
+            sys.stdout.write(f"\n<h3>{escapeHtml(name)}</h3>\n")
             if mode == "svg":
                 diagram.writeSvg(sys.stdout.write)
             elif mode == "standalone":
@@ -2310,12 +2450,13 @@ if __name__ == "__main__":
                 sys.stdout.write("\n</pre>\n")
             sys.stdout.write("\n")
 
-    sys.stdout.write("<!doctype html><title>Test</title><body>")
-    if mode == "ascii":
+sys.stdout.write("<!doctype html><title>Test</title><body>")
+sys.stdout.write("<h1>Molecules</h1>\n")
+if mode == "ascii":
         TextDiagram.setFormatting(TextDiagram.PARTS_ASCII)
-    elif mode == "unicode":
+elif mode == "unicode":
         TextDiagram.setFormatting(TextDiagram.PARTS_UNICODE)
-    elif mode in ("svg", "standalone"):
+elif mode in ("svg", "standalone"):
         sys.stdout.write(
             f"""
     		<style>
@@ -2325,20 +2466,10 @@ if __name__ == "__main__":
     		"""
         )
 
-    '''
-    with open("Samples/test.py", "r", encoding="utf-8") as fh:
-        exec(fh.read())  # pylint: disable=exec-used
-    sys.stdout.write("</body></html>")
 
-    with open("Samples/simple.py", "r", encoding="utf-8") as fh:
-       exec(fh.read())  # pylint: disable=exec-used
-    sys.stdout.write("</body></html>")
-
-    with open("Samples/models.py", "r", encoding="utf-8") as fh:
+with open(input_file+".py", "r", encoding="utf-8") as fh:
+        print('\nConverting .py to .html', file=sys.__stdout__)
         exec(fh.read())  # pylint: disable=exec-used
-    sys.stdout.write("</body></html>")
-    '''
+sys.stdout.write("</body></html>")
 
-    with open("multiple_molecule_species.py", "r", encoding="utf-8") as fh:
-        exec(fh.read())  # pylint: disable=exec-used
-    sys.stdout.write("</body></html>")
+print(f"\nConversion complete. Output saved to {input_file}.html", file=sys.__stdout__)
