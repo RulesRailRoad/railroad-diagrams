@@ -1,4 +1,5 @@
 import re
+import sys
 
 MoleculeColor = 'lightblue'
 SiteColor = 'lightgreen'
@@ -28,7 +29,7 @@ def bngl_to_railroad(bngl_string):
     # Step 1: Split molecule name and sites
     mol_match = re.match(r"(\w+)\((.*)\)", bngl_string.strip())
     if not mol_match:
-        raise ValueError("BNGL string format is invalid.")
+        print("BNGL string format is invalid.")
     
     molecule_name, site_block = mol_match.groups()
     sites = [s.strip() for s in site_block.split(',')]
@@ -75,11 +76,19 @@ for index, line in enumerate(lines):
             end_index = index
             break
     
+if begin_index is None and end_index is None: 
+    print('No molecule types found in the file.')
+    sys.exit()
+    
+    
 molecule_lines = [lines[i].strip() for i in range(begin_index + 1, end_index)]
-converted_lines = [bngl_to_railroad(line) for line in molecule_lines]
+converted_lines = []
+for line in molecule_lines:
+    if line.startswith('#'):
+        continue  # Skip empty lines and comments
+    converted_lines.append(bngl_to_railroad(line))
 
 # Write to .py file
-
 with open(output_file, "w") as of:
     print('\nWriting to python file:', output_file)
     for diagram in converted_lines:
