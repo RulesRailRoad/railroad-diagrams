@@ -4,6 +4,7 @@ from __future__ import annotations
 import math as Math
 import sys
 
+bond_coords = {}
 input_file = input('Python filepath: ')
 print('\nOpening .html file for writing:', input_file+'.html')
 sys.stdout = open(input_file+'.html', 'w')
@@ -357,7 +358,7 @@ DEFAULT_STYLE = """\
 
     .turquoise {
     fill: turquoise;
-    }    
+    }
     
 
     .railroad-diagram .up-triangle polygon {
@@ -494,6 +495,16 @@ class Diagram(DiagramMultiContainer):
             self.up + self.height + self.down + paddingTop + paddingBottom + 30
         )
         self.attrs["viewBox"] = f"0 0 {self.attrs['width']} {self.attrs['height']}"
+        global bond_coords
+        for bond_num, coords in bond_coords.items():
+            if len(coords) >= 2:
+                (x1, y1), (x2, y2) = coords[:2]
+                path = Path(x1,y1)
+                mid_x = (x1 + x2) / 2
+                path.attrs["d"] += f" L{mid_x} {y1} L{mid_x} {y2} L{x2} {y2}"
+                path.attrs["style"] = "stroke: gray"
+                path.addTo(g)
+        bond_coords.clear()
         g.addTo(self)
         self.formatted = True
         return self
@@ -779,7 +790,7 @@ class MultipleChoice(DiagramMultiContainer):
     def __init__(self, default: int, type: str, *items: Node):
         DiagramMultiContainer.__init__(self, "g", items)
         assert 0 <= default < len(items)
-        assert type in ["any", "all"]
+        assert type in ["up-arrow", "down-arrow"]
         self.default = default
         self.type = type
         self.needsSpace = True
@@ -815,7 +826,7 @@ class MultipleChoice(DiagramMultiContainer):
         leftGap, rightGap = determineGaps(width, self.width)
 
         # Hook up the two sides if self is narrower than its stated width.
-        Path(x, y).h(leftGap).addTo(self)
+        Path(x, y).h(leftGap+10).addTo(self)
         Path(x + leftGap + self.width, y + self.height).h(rightGap).addTo(self)
         x += leftGap
 
@@ -872,22 +883,23 @@ class MultipleChoice(DiagramMultiContainer):
         DiagramItem(
             "title",
             text="take one or more branches, once each, in any order"
-            if self.type == "any"
+            if self.type == "up-arrow"
             else "take all branches, once each, in any order",
         ).addTo(text)
         DiagramItem(
             "path",
             attrs={
-                "d": "M {x} {y} h -26 a 4 4 0 0 0 -4 4 v 12 a 4 4 0 0 0 4 4 h 26 z".format(
+                "d": "M {x} {y} h -16 a 4 4 0 0 0 -4 4 v 12 a 4 4 0 0 0 4 4 h 16 z".format(
                     x=x + 30, y=y - 10
                 ),
                 "class": "diagram-text",
+                "style": "fill: orange",
             },
         ).addTo(text)
         DiagramItem(
             "text",
-            text="⬆" if self.type == "any" else "⬇",
-            attrs={"x": x + 15, "y": y + 6, "class": "diagram-text"},
+            text="⬆" if self.type == "up-arrow" else "⬇",
+            attrs={"x": x + 20, "y": y + 6, "class": "diagram-text"},
         ).addTo(text)
         DiagramItem(
             "path",
@@ -896,18 +908,19 @@ class MultipleChoice(DiagramMultiContainer):
                     x=x + self.width - 20, y=y - 10
                 ),
                 "class": "diagram-text",
+                "style": "fill: orange",
             },
         ).addTo(text)
         DiagramItem(
             "text",
-            text="⬆" if self.type == "any" else "⬇",
+            text="⬆" if self.type == "up-arrow" else "⬇",
             attrs={"x": x + self.width - 10, "y": y + 6, "class": "diagram-text"},
         ).addTo(text)
         return self
 
     def textDiagram(self) -> TextDiagram:
         (multi_repeat,) = TextDiagram._getParts(["multi_repeat"])
-        anyAll = TextDiagram.rect("1+" if self.type == "any" else "all")
+        anyAll = TextDiagram.rect("⬆" if self.type == "up-arrow" else "⬇")
         diagramTD = Choice.textDiagram(self)
         repeatTD = TextDiagram.rect(multi_repeat)
         diagramTD = anyAll.appendRight(diagramTD, "")
@@ -1021,7 +1034,6 @@ class EndWhiteSpace(DiagramItem):
     def __repr__(self) -> str:
             return f"End(type={repr(self.type)})"
 
-
 class Terminal(DiagramItem):
     def __init__(
         self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = "", box_color: Opt[str]=None, 
@@ -1084,14 +1096,13 @@ class Terminal(DiagramItem):
 
         if self.bottom_bind:
             if self.wrap:
-                arc_start = x + leftGap + self.width
-                arc_width = self.width       
+                arc_start = x + leftGap + self.width + AR       
                 arc_height = 30
 
                 path = Path(arc_start, y)
-                path.arc("ne").down(arc_height*2).arc('ws').right((arc_width-AR*3)/2).arc('ne').arc('wn').right((arc_width-AR*3)/2).arc("se").up(arc_height*2).arc('wn')
+                path.arc("ne").down(arc_height*2).arc('ws').right((self.width - AR * 4) / 2 - AR/5-0.5).arc('ne').arc('wn').right((self.width - AR * 4) / 2 - AR/5-0.5).arc("se").up(arc_height*2).arc('wn')
                 path.attrs["class"] = "bottom-bind"
-                path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2; fill: none"
+                path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path.addTo(self)
             else:
                 horiz_dist = self.width / 2 - AR
@@ -1110,7 +1121,7 @@ class Terminal(DiagramItem):
                 path2.attrs["style"] = style
                 path2.addTo(self)
 
-                if self.bond_num and self.bond_num != "?":
+                if self.bond_num and self.bond_num != "?" and self.bond_num != "+":
                     if self.bond_type == 'circle':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 4
@@ -1120,43 +1131,51 @@ class Terminal(DiagramItem):
                     if self.bond_type == 'nrbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        term = UpTriangle(self.bond_num, box_color="white")
-                        term.width *= 0.78
-                        term.format(cx - term.width / 2, cy, term.width).addTo(self)
-                    if self.bond_type == 'nradded':
-                        cx = x + self.width / 2
-                        cy = y + self.height + AR * 5
-                        term = DownTriangle(self.bond_num, box_color="white")
-                        term.width *= 0.78
-                        term.format(cx - term.width / 2, cy, term.width).addTo(self)
-                    if self.bond_type == 'radded':
-                        cx = x + self.width / 2
-                        cy = y + self.height + AR * 5
-                        up = UpTriangle(self.bond_num, box_color="green")
-                        up_height = up.up + up.down
+                        up = NonTerminal("⬆", box_color="orange")
+                        up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = DownTriangle('', box_color="red")
-                        down.width *= 0.92
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        down.width *= 0.75
+                        down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
+                    if self.bond_type == 'nradded':
+                        cx = x + self.width / 2
+                        cy = y + self.height + AR * 5
+                        up = NonTerminal("⬇", box_color="orange")
+                        up_height = up.up + up.down -2
+                        up.width *= 0.75
+                        up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
+
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        down.width *= 0.75
+                        down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
+                    if self.bond_type == 'radded':
+                        cx = x + self.width / 2
+                        cy = y + self.height + AR * 5
+                        up = NonTerminal("⬆⬇", box_color="orange")
+                        up_height = up.up + up.down -2
+                        up.width *= 0.75
+                        up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
+
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        #down.width *= 0.9
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = UpTriangle(self.bond_num, box_color="red")
-                        up_height = up.up + up.down
+                        up = NonTerminal("⭥", box_color="orange")
+                        up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = DownTriangle('', box_color="green")
-                        down.width *= 0.92
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
-                    if self.bond_type == 'diamond':
-                        cx = x + self.width / 2
-                        cy = y + self.height + AR * 4
-                        term = Diamond(self.bond_num, box_color="white")
-                        term.width *= 0.78
-                        term.format(cx - term.width / 2, cy, term.width).addTo(self)
+                    #global bond_coords
+                    #cx = cx - self.width /4
+                    #cy = cy + self.height 
+                    #bond_coords.setdefault(self.bond_num, []).append((cx, cy))
 
         if self.top_bind:
             horiz_dist = self.width / 2 - AR
@@ -1262,14 +1281,13 @@ class NonTerminal(DiagramItem):
 
         if self.bottom_bind:
             if self.wrap:
-                arc_start = x + leftGap + self.width
-                arc_width = self.width       
+                arc_start = x + leftGap + self.width + AR      
                 arc_height = 30
 
                 path = Path(arc_start, y)
-                path.arc("ne").down(arc_height*2).arc('ws').right((arc_width-AR*3)/2).arc('ne').arc('wn').right((arc_width-AR*3)/2).arc("se").up(arc_height*2).arc('wn')
+                path.arc("ne").down(arc_height*2).arc('ws').right((self.width - AR * 4) / 2 - AR/5-0.5).arc('ne').arc('wn').right((self.width - AR * 4) / 2 - AR/5-0.5).arc("se").up(arc_height*2).arc('wn')
                 path.attrs["class"] = "bottom-bind"
-                path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2; fill: none"
+                path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path.addTo(self)
             else:
                 horiz_dist = self.width / 2 - AR
@@ -1288,7 +1306,7 @@ class NonTerminal(DiagramItem):
                 path2.attrs["style"] = style
                 path2.addTo(self)
 
-                if self.bond_num and self.bond_num != "?":
+                if self.bond_num and self.bond_num != "?" and self.bond_num != "+":
                     if self.bond_type == 'circle':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 4
@@ -1298,43 +1316,48 @@ class NonTerminal(DiagramItem):
                     if self.bond_type == 'nrbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        term = UpTriangle(self.bond_num, box_color="white")
-                        term.width *= 0.78
-                        term.format(cx - term.width / 2, cy, term.width).addTo(self)
-                    if self.bond_type == 'nradded':
-                        cx = x + self.width / 2
-                        cy = y + self.height + AR * 5
-                        term = DownTriangle(self.bond_num, box_color="white")
-                        term.width *= 0.78
-                        term.format(cx - term.width / 2, cy, term.width).addTo(self)
-                    if self.bond_type == 'radded':
-                        cx = x + self.width / 2
-                        cy = y + self.height + AR * 5
-                        up = UpTriangle(self.bond_num, box_color="green")
-                        up_height = up.up + up.down
+                        up = NonTerminal("⬆", box_color="orange")
+                        up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = DownTriangle('', box_color="red")
-                        down.width *= 0.92
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        down.width *= 0.75
+                        down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
+                    if self.bond_type == 'nradded':
+                        cx = x + self.width / 2
+                        cy = y + self.height + AR * 5
+                        up = NonTerminal("⬇", box_color="orange")
+                        up_height = up.up + up.down -2
+                        up.width *= 0.75
+                        up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
+
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        down.width *= 0.75
+                        down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
+                    if self.bond_type == 'radded':
+                        cx = x + self.width / 2
+                        cy = y + self.height + AR * 5
+                        up = NonTerminal("⬆⬇", box_color="orange")
+                        up_height = up.up + up.down -2
+                        up.width *= 0.75
+                        up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
+
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        #down.width *= 0.9
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = UpTriangle(self.bond_num, box_color="red")
-                        up_height = up.up + up.down
+                        up = NonTerminal("⭥", box_color="orange")
+                        up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = DownTriangle('', box_color="green")
-                        down.width *= 0.92
+                        down = NonTerminal(self.bond_num, box_color="white")
+                        down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
-                    if self.bond_type == 'diamond':
-                        cx = x + self.width / 2
-                        cy = y + self.height + AR * 4
-                        term = Diamond(self.bond_num, box_color="white")
-                        term.width *= 0.78
-                        term.format(cx - term.width / 2, cy, term.width).addTo(self)
+                    
         
         if self.top_bind:
             horiz_dist = self.width / 2 - AR
@@ -1354,7 +1377,6 @@ class NonTerminal(DiagramItem):
             "width": self.width,
             "height": self.up + self.down,
             }
-
         if self.box_color is not None:
             rect_attrs["style"] = f"fill: {self.box_color}"
 
