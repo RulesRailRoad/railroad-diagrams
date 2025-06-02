@@ -366,17 +366,17 @@ DEFAULT_STYLE = """\
 		fill:red
 }
 
-    svg.railroad-diagram path.bind {
+    svg.railroad-diagram path.right-bind {
     stroke: black;
     stroke-width: 3;
     fill: rgba(0, 0, 0, 0);
 }
-    svg.railroad-diagram g.terminal path.bind {
+    svg.railroad-diagram g.terminal path.right-bind {
     stroke: black; 
     stroke-width: 3;
     fill: rgba(0, 0, 0, 0);
 }
-    svg.railroad-diagram g.nonterminal path.bind {
+    svg.railroad-diagram g.nonterminal path.right-bind {
     stroke: black;
     stroke-width: 3;
     fill: rgba(0, 0, 0, 0);
@@ -480,7 +480,7 @@ class Diagram(DiagramMultiContainer):
                 x += 10
         self.attrs["width"] = str(self.width + paddingLeft + paddingRight)
         self.attrs["height"] = str(
-            self.up + self.height + self.down + paddingTop + paddingBottom
+            self.up + self.height + self.down + paddingTop + paddingBottom + 20
         )
         self.attrs["viewBox"] = f"0 0 {self.attrs['width']} {self.attrs['height']}"
         g.addTo(self)
@@ -1035,13 +1035,14 @@ class AlternatingSequence(DiagramMultiContainer):
 
 
 class Choice(DiagramMultiContainer):
-    def __init__(self, default: int, *items: Node, bind: bool = False, bind_color: str = None):
+    def __init__(self, default: int, *items: Node, right_bind: bool = False, right_bind_color: str = 'black', bond_num: int = None):
         DiagramMultiContainer.__init__(self, "g", items)
         assert default < len(items)
         self.default = default
         self.width = AR * 4 + max(item.width for item in self.items)
-        self.bind = bind
-        self.bind_color = bind_color
+        self.right_bind = right_bind
+        self.right_bind_color = right_bind_color
+        self.bond_num = bond_num
 
         # The size of the vertical separation between an item
         # and the following item.
@@ -1106,11 +1107,18 @@ class Choice(DiagramMultiContainer):
         Path(x + leftGap + self.width, y + self.height).h(rightGap).addTo(self)
         x += leftGap
 
-        if self.bind:
-            path = Path(x + self.width, y).arc("ne").down(13)
+        if self.right_bind:
+            path = Path(x + self.width, y).arc("ne").down(25)
             path.attrs["class"] = "bind"
-            path.attrs["style"] = f'stroke: {self.bind_color}'
+            path.attrs["style"] = f'stroke: {self.right_bind_color};'
             path.addTo(self)
+
+            if self.bond_num:
+                cx = x + self.width + AR
+                cy = y + AR + 25
+                term = Terminal(self.bond_num, box_color="white")
+                term.width *= 0.78
+                term.format(cx - term.width / 2, cy, term.width).addTo(self)
 
         innerWidth = self.width - AR * 4
         default = self.items[self.default]
@@ -1818,8 +1826,8 @@ class End(DiagramItem):
 class Terminal(DiagramItem):
     def __init__(
         self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = "", box_color: Opt[str]=None, 
-        bind: bool = False, bottom_bind: bool = False, top_bind: bool = False, bind_color: Opt[str] = None,
-        bottom_bind_color: Opt[str] = None, top_bind_color: Opt[str] = None
+        right_bind: bool = False, bottom_bind: bool = False, top_bind: bool = False, right_bind_color: Opt[str] = 'black',
+        bottom_bind_color: Opt[str] = 'black', top_bind_color: Opt[str] = 'black', bond_num: int = None
     ):
         DiagramItem.__init__(self, "g", {"class": " ".join(["terminal", cls])})
         self.text = text
@@ -1828,14 +1836,16 @@ class Terminal(DiagramItem):
         self.cls = cls
         self.box_color = box_color
 
-        self.bind = bind
-        self.bind_color = bind_color
+        self.right_bind = right_bind
+        self.right_bind_color = right_bind_color
 
         self.bottom_bind = bottom_bind
         self.bottom_bind_color = bottom_bind_color
 
         self.top_bind = top_bind
         self.top_bind_color = top_bind_color
+
+        self.bond_num = bond_num
         
         self.width = len(text) * CHAR_WIDTH + 20
         self.up = 11
@@ -1857,12 +1867,19 @@ class Terminal(DiagramItem):
         Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
 
         
-        if self.bind:
-            path = Path(x + self.width, y).arc("ne").down(13)
-            path.attrs["class"] = "bind"
-            path.attrs["style"] = f"stroke: {self.bind_color}"
+        if self.right_bind:
+            path = Path(x + self.width, y).arc("ne").down(25)
+            path.attrs["class"] = "right-bind"
+            path.attrs["style"] = f"stroke: {self.right_bind_color}"
             path.addTo(self)
-        
+
+            if self.bond_num:
+                cx = x + self.width + AR
+                cy = y + AR + 25
+                term = Terminal(self.bond_num, box_color="white")
+                term.width *= 0.78
+                term.format(cx - term.width / 2, cy, term.width).addTo(self)
+
         if self.bottom_bind:
             horiz_dist = self.width / 2 - AR
             path1 = Path(x, y + self.height).arc("nw").arc("ws").right(horiz_dist).arc("ne").down(self.height)
@@ -1874,6 +1891,13 @@ class Terminal(DiagramItem):
             path2.attrs["class"] = "bottom-bind"
             path2.attrs["style"] = f"stroke: {self.bottom_bind_color}"
             path2.addTo(self)
+
+            if self.bond_num and self.bond_num != "?" and self.bond_num != "+":
+                cx = x + self.width / 2
+                cy = y + self.height + AR * 4
+                term = Terminal(self.bond_num, box_color="white")
+                term.width *= 0.78
+                term.format(cx - term.width / 2, cy, term.width).addTo(self)
 
         if self.top_bind:
             horiz_dist = self.width / 2 - AR
@@ -1921,8 +1945,8 @@ class Terminal(DiagramItem):
 class NonTerminal(DiagramItem):
     def __init__(
         self, text: str, href: Opt[str] = None, title: Opt[str] = None, cls: str = "", box_color: Opt[str]=None, 
-        bind: bool = False, bottom_bind: bool = False, top_bind: bool = False, bind_color: Opt[str] = None,
-        bottom_bind_color: Opt[str] = None, top_bind_color: Opt[str] = None
+        right_bind: bool = False, bottom_bind: bool = False, top_bind: bool = False, right_bind_color: Opt[str] = 'black',
+        bottom_bind_color: Opt[str] = 'black', top_bind_color: Opt[str] = 'black', bond_num: int = None
     ):
         DiagramItem.__init__(self, "g", {"class": " ".join(["non-terminal", cls])})
         self.text = text
@@ -1931,14 +1955,16 @@ class NonTerminal(DiagramItem):
         self.cls = cls
         self.box_color = box_color
 
-        self.bind = bind
-        self.bind_color = bind_color
+        self.right_bind = right_bind
+        self.right_bind_color = right_bind_color
 
         self.bottom_bind = bottom_bind
         self.bottom_bind_color = bottom_bind_color
 
         self.top_bind = top_bind
         self.top_bind_color = top_bind_color
+
+        self.bond_num = bond_num
 
         self.width = len(text) * CHAR_WIDTH + 20
         self.up = 11
@@ -1959,11 +1985,18 @@ class NonTerminal(DiagramItem):
         Path(x, y).h(leftGap).addTo(self)
         Path(x + leftGap + self.width, y).h(rightGap).addTo(self)
 
-        if self.bind:
-            path = Path(x + self.width, y).arc("ne").down(13)
-            path.attrs["class"] = "bind"
-            path.attrs["style"] = f"stroke: {self.bind_color}"
+        if self.right_bind:
+            path = Path(x + self.width, y).arc("ne").down(25)
+            path.attrs["class"] = "right-bind"
+            path.attrs["style"] = f"stroke: {self.right_bind_color}"
             path.addTo(self)
+
+            if self.bond_num:
+                cx = x + self.width + AR
+                cy = y + AR + 25
+                term = Terminal(self.bond_num, box_color="white")
+                term.width *= 0.78
+                term.format(cx - term.width / 2, cy, term.width).addTo(self)
 
         if self.bottom_bind:
             horiz_dist = self.width / 2 - AR
@@ -1976,6 +2009,13 @@ class NonTerminal(DiagramItem):
             path2.attrs["class"] = "bottom-bind"
             path2.attrs["style"] = f"stroke: {self.bottom_bind_color}"
             path2.addTo(self)
+
+            if self.bond_num and self.bond_num != "?" and self.bond_num != "+":
+                cx = x + self.width / 2
+                cy = y + self.height + AR * 4
+                term = Terminal(self.bond_num, box_color="white")
+                term.width *= 0.78
+                term.format(cx - term.width / 2, cy, term.width).addTo(self)
         
         if self.top_bind:
             horiz_dist = self.width / 2 - AR
@@ -2078,7 +2118,6 @@ class Triangle(DiagramItem):
 
     def textDiagram(self) -> TextDiagram:
         return TextDiagram.other(self.text)
-
 
 
 
@@ -2564,7 +2603,6 @@ def add(name: str, diagram: DiagramItem) -> None:
             sys.stdout.write("\n")
 
 sys.stdout.write("<!doctype html><title>Test</title><body>")
-sys.stdout.write("<h1>Molecules</h1>\n")
 if mode == "ascii":
         TextDiagram.setFormatting(TextDiagram.PARTS_ASCII)
 elif mode == "unicode":
