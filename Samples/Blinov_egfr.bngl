@@ -25,6 +25,7 @@ begin seed species
 1 @EC:EGF(rb) 680.0
 2 @M:EGFR(ecd,tmd,y1068~u,y1173~u) 602.0
 3 @Cyt:Shc(sh3,Y773~u) 150.0
+EGF(rb!1).EGFR(ecd!1,tmd,y1068~u!2,y1173~u).Shc(sh3,Y773~u!2)
 end seed species
 
 begin observables
@@ -32,8 +33,8 @@ Molecules EGFR_tot @M:EGFR()
 Molecules EGF_EC @EC:EGF()
 Molecules Shc_cyt @Cyt:Shc()
 Molecules Dimers @M:EGFR(tmd!+)
-Molecules Y1068_phosp @M:EGFR(y1068~p!?)
-Molecules Y1173_phosp @M:EGFR(y1173~p!?)
+Molecules Y1068_phosp @M:EGFR(y1068~u~p!+)
+Molecules Y1173_phosp @M:EGFR(y1173~u~p!+)
 Molecules Total_phosp @M:EGFR(y1068~p!?) @M:EGFR(y1173~p!?)
 Molecules ShcP_Cyt @Cyt:Shc(Y773~p!?)
 end observables

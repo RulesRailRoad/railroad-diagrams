@@ -123,3 +123,25 @@ add('goes to MAP3K(S~I)',
                     Choice(0, Comment("    "), '~l'),)
                ),
     ))
+
+
+# color changes
+add('EGFR',
+    Diagram(
+    "EGFR",
+    Choice(0, Comment("    "),
+           'ecd',
+           ),
+       Choice(0, Comment("    "),
+           'tmd',
+           ),
+    Choice(0, Comment("    "),
+           Sequence('Y1',
+                    Choice(0, Comment("    "), NonTerminal('~U', cls="red"), NonTerminal('~P', cls="green")),)
+           ),
+    Choice(0, Skip(),
+           Sequence('Y2',
+                    Choice(0, Comment("    "), '~U', '~P'),)
+           ),
+    
+))

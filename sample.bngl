@@ -22,6 +22,7 @@ begin reaction rules
     # Note changed multiplicity
     # Receptor-aggregation 
     egfr(l!+,r!-,Y1068~Y~pY!?,Y1148~Y~pY!?) + egfr(l!+,r!-,Y1068~Y~pY!?,Y1148~Y~pY!?) <-> egfr(l!+,r!3,Y1068~Y~pY!?,Y1148~Y~pY!?).egfr(l!+,r!3,Y1068~Y~pY!?,Y1148~Y~pY!?)  kp2,km2
+    egfr(l!+,r!-,Y1068~Y!?,Y1148~Y~pY!?) + egfr(l!+,r!-,Y1068~Y~pY!?,Y1148~Y~pY!?) <-> egfr(l!+,r!3,Y1068~pY!?,Y1148~Y~pY!?).egfr(l!+,r!3,Y1068~Y~pY!?,Y1148~Y~pY!?)  kp2,km2
 
     # Transphosphorylation of egfr by RTK
     egfr(l!?, r!+,Y1068~Y!-, Y1148~Y~pY!?) -> egfr(l!?, r!+,Y1068~pY!-, Y1148~Y~pY!?)  kp3

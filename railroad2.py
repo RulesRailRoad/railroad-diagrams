@@ -492,22 +492,24 @@ class Diagram(DiagramMultiContainer):
                 x += 10
         self.attrs["width"] = str(self.width + paddingLeft + paddingRight)
         self.attrs["height"] = str(
-            self.up + self.height + self.down + paddingTop + paddingBottom + 30
+            self.up + self.height + self.down + paddingTop + paddingBottom  + 70
         )
         self.attrs["viewBox"] = f"0 0 {self.attrs['width']} {self.attrs['height']}"
         global bond_coords
         for bond_num, coords in bond_coords.items():
             if len(coords) >= 2:
                 (x1, y1), (x2, y2) = coords[:2]
-                path = Path(x1,y1)
-                mid_x = (x1 + x2) / 2
-                path.attrs["d"] += f" L{mid_x} {y1} L{mid_x} {y2} L{x2} {y2}"
-                path.attrs["style"] = "stroke: gray"
+                vert = float(self.attrs["height"])/5
+                bottom_y = y1 + vert
+                dist_up = bottom_y - y2
+                path = Path(x1,y1).down(vert).right(x2-x1).up(dist_up)
+                path.attrs["style"] = "stroke: black"
                 path.addTo(g)
         bond_coords.clear()
         g.addTo(self)
         self.formatted = True
         return self
+        
 
     def textDiagram(self) -> TextDiagram:
         (separator, ) = TextDiagram._getParts(["separator"])
@@ -1122,6 +1124,8 @@ class Terminal(DiagramItem):
                 path2.addTo(self)
 
                 if self.bond_num and self.bond_num != "?" and self.bond_num != "+":
+                    cx = 0
+                    cy = 0
                     if self.bond_type == 'circle':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 4
@@ -1159,12 +1163,11 @@ class Terminal(DiagramItem):
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
                         down = NonTerminal(self.bond_num, box_color="white")
-                        #down.width *= 0.9
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⭥", box_color="orange")
+                        up = NonTerminal("⬆⬇", box_color="orange")
                         up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
@@ -1172,10 +1175,12 @@ class Terminal(DiagramItem):
                         down = NonTerminal(self.bond_num, box_color="white")
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
-                    #global bond_coords
-                    #cx = cx - self.width /4
-                    #cy = cy + self.height 
-                    #bond_coords.setdefault(self.bond_num, []).append((cx, cy))
+                    global bond_coords
+                    if self.bond_type == 'circle':
+                        cy += term.height / 2 + term.down  # Term is your circle box
+                    elif 'down' in locals() and hasattr(down, 'formatted_y'):
+                        cy = down.formatted_y + down.height / 2 + down.down
+                    bond_coords.setdefault(self.bond_num, []).append((cx, cy))
 
         if self.top_bind:
             horiz_dist = self.width / 2 - AR
@@ -1307,6 +1312,8 @@ class NonTerminal(DiagramItem):
                 path2.addTo(self)
 
                 if self.bond_num and self.bond_num != "?" and self.bond_num != "+":
+                    cx=0
+                    cy=0
                     if self.bond_type == 'circle':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 4
@@ -1357,7 +1364,12 @@ class NonTerminal(DiagramItem):
                         down = NonTerminal(self.bond_num, box_color="white")
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
-                    
+                    global bond_coords
+                    if self.bond_type == 'circle':
+                        cy += term.height / 2 + term.down  # Term is your circle box
+                    elif 'down' in locals() and hasattr(down, 'formatted_y'):
+                        cy = down.formatted_y + down.height / 2 + down.down
+                    bond_coords.setdefault(self.bond_num, []).append((cx, cy))
         
         if self.top_bind:
             horiz_dist = self.width / 2 - AR
