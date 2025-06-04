@@ -4,9 +4,12 @@ MoleculeColor = 'lightgreen'
 SiteColor = 'lightblue'
 StateColor = 'khaki'
 
-def bngl_to_railroad(bngl_string):
+def bngl_to_railroad(bngl_string, display_string=None):
     mol_chunks = bngl_string.split('.')
-    diagrams = [f'add("{bngl_string.strip()}",', "    Diagram("]
+    if display_string:
+        diagrams = [f'add("{display_string.strip()}",', "    Diagram("]
+    else:
+        diagrams = [f'add("{bngl_string.strip()}",', "    Diagram("]
 
     for idx, chunk in enumerate(mol_chunks):
         mol_match = re.match(r"(\w+)\((.*)\)", chunk.strip())
@@ -36,13 +39,18 @@ def bngl_to_railroad(bngl_string):
                 states = parts[1:]
 
                 fin_states = []
-                for state in states:
+                for state_idx, state in enumerate(states):
                     bond_arg = ""
                     bond_num_arg = ""
                     if "!" in state:
                         state_split = state.split("!")
                         state_name = state_split[0]
                         bond_num = state_split[1]
+
+                        if state_idx == len(states)-1 and bond_num == "?":
+                            states[-1] = states[-1].split("!")[0]
+                            fin_states.append(f'NonTerminal("{state_name}", box_color="{StateColor}", bottom_bind=True, wrap=True)')
+                            continue
 
                         if bond_num == "?":
                             bond_arg = ', bottom_bind=True, bottom_bind_color="gray"'
@@ -195,8 +203,84 @@ for line in obs_lines:
         continue  
     parts = line.split()
     bngl_expr = " ".join(parts[2:])
+    if ":" in bngl_expr:
+        bngl_expr = bngl_expr.split(':')[1]
+    display_string = bngl_expr
     expanded = expand_expr(bngl_expr, mol_site_dict)
-    converted_obs.append(bngl_to_railroad(expanded))
+    converted_obs.append(bngl_to_railroad(expanded, display_string))
+
+# reaction rules
+begin_reaction = None
+end_reaction = None
+
+
+for index, line in enumerate(lines):
+   if line.lower().startswith("begin reaction rules"):
+           begin_reaction = index
+   elif line.lower().startswith("end reaction rules"):
+           end_reaction = index
+           break
+
+
+if begin_reaction is None and end_reaction is None:
+   print('No reaction rules found in the file.')
+else:
+    reaction_lines = [lines[i].strip() for i in range(begin_reaction + 1, end_reaction)]
+
+
+converted_reaction = []
+for line in reaction_lines:
+    if line.startswith('#') or line.strip() == "":
+       continue  # Skip empty lines and comments
+    
+    if ":" in line:
+        line = line.split(":", 1)[1].strip()
+
+   # Split into reactants and products
+    if '<->' in line:
+       arrow = '<->'
+    elif '->' in line:
+       arrow = '->'
+    else:
+       continue
+
+    parts = line.split(arrow)
+    reactants_str = parts[0].strip()
+    products_str = parts[1].strip()
+
+    stripped_r = []
+    reactants = reactants_str.split(" + ")
+    for part in reactants:
+        part = part.strip()
+        end_reactant_idx = part.rindex(")")
+        part = part[:end_reactant_idx+1]
+        if ":" in part:
+            part = part.split(":")[1]
+        stripped_r.append(part)
+    reactants_str = " + ".join(stripped_r)
+
+    stripped_p = []
+    products = products_str.split(" + ")
+    for part in products:
+        part = part.strip()
+        end_prod_idx = part.rindex(")")
+        part = part[:end_prod_idx+1]
+        if ":" in part:
+            part = part.split(":")[1]
+        stripped_p.append(part)
+    products_str = " + ".join(stripped_p)
+
+    display_string = f'{reactants_str} {arrow} {products_str}'
+
+    expanded_reactants = expand_expr(reactants_str.replace(" + ", "."), mol_site_dict)
+    expanded_products = expand_expr(products_str.replace(" + ", "."), mol_site_dict)
+
+    reactant_diagram = bngl_to_railroad(expanded_reactants, display_string)
+    product_diagram = bngl_to_railroad(expanded_products, display_string)
+
+
+    converted_reaction.append(reactant_diagram)
+    converted_reaction.append(product_diagram)
 
 
 # Write to .py file
@@ -213,6 +297,10 @@ with open(output_file, "w") as of:
     of.write('sys.stdout.write("<h1>Observables</h1>\\n")\n\n')
     for obs in converted_obs:
         of.write(f"\n{obs}")
+    
+    of.write('sys.stdout.write("<h1>Reactions</h1>\\n")\n\n')
+    for reaction in converted_reaction:
+        of.write(f"\n{reaction}")
 
 print(f"\nBNGL to Python conversion complete. Output saved to {output_file}.")
 
