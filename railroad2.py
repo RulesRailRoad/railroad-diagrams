@@ -1098,11 +1098,11 @@ class Terminal(DiagramItem):
 
         if self.bottom_bind:
             if self.wrap:
-                arc_start = x + leftGap + self.width + AR       
-                arc_height = 30
+                arc_start = x - AR
+                arc_height = AR*1.5
 
-                path = Path(arc_start, y)
-                path.arc("ne").down(arc_height*2).arc('ws').right((self.width - AR * 4) / 2 - AR/5-0.5).arc('ne').arc('wn').right((self.width - AR * 4) / 2 - AR/5-0.5).arc("se").up(arc_height*2).arc('wn')
+                path = Path(arc_start, y-AR/2)
+                path.down(arc_height).arc('ws').right((self.width)/4).arc('ne').arc('wn').right((self.width)/4).arc("se").up(arc_height)
                 path.attrs["class"] = "bottom-bind"
                 path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path.addTo(self)
@@ -1173,7 +1173,6 @@ class Terminal(DiagramItem):
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
                         down = NonTerminal(self.bond_num, box_color="white")
-                        down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     global bond_coords
                     if self.bond_type == 'circle':
@@ -1286,11 +1285,11 @@ class NonTerminal(DiagramItem):
 
         if self.bottom_bind:
             if self.wrap:
-                arc_start = x + leftGap + self.width + AR      
-                arc_height = 30
+                arc_start = x - AR
+                arc_height = AR*1.5
 
-                path = Path(arc_start, y)
-                path.arc("ne").down(arc_height*2).arc('ws').right((self.width - AR * 4) / 2 - AR/5-0.5).arc('ne').arc('wn').right((self.width - AR * 4) / 2 - AR/5-0.5).arc("se").up(arc_height*2).arc('wn')
+                path = Path(arc_start, y-AR/2)
+                path.down(arc_height).arc('ws').right((self.width)/4).arc('ne').arc('wn').right((self.width)/4).arc("se").up(arc_height)
                 path.attrs["class"] = "bottom-bind"
                 path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path.addTo(self)
@@ -1351,7 +1350,6 @@ class NonTerminal(DiagramItem):
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
                         down = NonTerminal(self.bond_num, box_color="white")
-                        #down.width *= 0.9
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
                         cx = x + self.width / 2
@@ -1362,7 +1360,6 @@ class NonTerminal(DiagramItem):
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
                         down = NonTerminal(self.bond_num, box_color="white")
-                        down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     global bond_coords
                     if self.bond_type == 'circle':

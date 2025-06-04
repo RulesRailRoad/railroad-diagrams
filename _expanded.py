@@ -4,9 +4,6 @@ def expand_expr(bngl_expr, mol_site_dict):
     for chunk in chunks:
         chunk = chunk.strip()
 
-        if ":" in chunk:
-            chunk = chunk.split(':')[1]
-
         if '(' in chunk and ')' in chunk:
             mol_end_idx = chunk.index('(')
             expr_end_idx = chunk.index(')')
