@@ -4,7 +4,7 @@ MoleculeColor = 'lightgreen'
 SiteColor = 'lightblue'
 StateColor = 'khaki'
 
-def bngl_to_railroad(bngl_string, display_string=None):
+def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
     mol_chunks = bngl_string.split('.')
     if display_string:
         diagrams = [f'add("{display_string.strip()}",', "    Diagram("]
@@ -46,8 +46,8 @@ def bngl_to_railroad(bngl_string, display_string=None):
                         state_split = state.split("!")
                         state_name = state_split[0]
                         bond_num = state_split[1]
-
-                        if state_idx == len(states)-1 and bond_num == "?":
+                        
+                        if len(states) > 1 and state_idx == len(states)-1 and bond_num == "?":
                             states[-1] = states[-1].split("!")[0]
                             fin_states.append(f'NonTerminal("{state_name}", box_color="{StateColor}", bottom_bind=True, wrap=True)')
                             continue
@@ -62,7 +62,24 @@ def bngl_to_railroad(bngl_string, display_string=None):
                             bond_arg = ', bottom_bind=True'
                             bond_num_arg = f', bond_num="{bond_num}"'
                         state = state_name
-                    fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg})')
+                    if changes_dict:
+                        changes = changes_dict.get(f'{molecule_name}:{site_name}')
+                        if changes and (changes["change"] == state_change_up or changes["change"] == state_change_down):
+                            direction = "down-arrow" if changes["change"] == state_change_down else "up-arrow"
+                            reactant_state = changes["reactant"].split("~")[-1].split("!")[0]
+                            product_state = changes["product"].split("~")[-1].split("!")[0]
+
+                            for mol_site in mol_site_dict.get(molecule_name):
+                                if mol_site.startswith(site_name) and "~" in mol_site:
+                                    state_list = [s.split("!")[0] for s in mol_site.split("~")[1:]]
+                                    break
+                            ordered_states = [s for s in state_list if s in (reactant_state, product_state)]
+                            all_states = [f'NonTerminal("{s}", box_color="{StateColor}")' for s in ordered_states]
+                            fin_states = [f'MultipleChoice(0, "{direction}", {", ".join(all_states)})']
+                        else:
+                            fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg})')
+                    else:
+                            fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg})')
 
                 state_choices = ', '.join(fin_states)
                 site_code = f'''    Choice(0, Comment("    "), Sequence(Terminal("{site_name}", box_color='{SiteColor}'), Choice(0, Comment("    "), {state_choices}))),'''
@@ -132,6 +149,7 @@ if begin_index is None and end_index is None:
     
 molecule_lines = [lines[i].strip() for i in range(begin_index + 1, end_index)]
 mol_site_dict = molecule_site_dict(molecule_lines)
+print(mol_site_dict)
 converted_lines = []
 for line in molecule_lines:
     if line.startswith('#'):
@@ -275,13 +293,13 @@ for line in reaction_lines:
     expanded_reactants = expand_expr(reactants_str.replace(" + ", "."), mol_site_dict)
     expanded_products = expand_expr(products_str.replace(" + ", "."), mol_site_dict)
 
-    reactant_diagram = bngl_to_railroad(expanded_reactants, display_string)
-    product_diagram = bngl_to_railroad(expanded_products, display_string)
+    # reaction rules
+    from compare_reactions import *
+    changes_dict = compare_reactions(expanded_reactants, expanded_products, arrow, mol_site_dict)
 
+    reaction_diagram = bngl_to_railroad(expanded_reactants, display_string, changes_dict)
 
-    converted_reaction.append(reactant_diagram)
-    converted_reaction.append(product_diagram)
-
+    converted_reaction.append(reaction_diagram)
 
 # Write to .py file
 with open(output_file, "w") as of:
