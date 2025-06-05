@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BNGL Expander</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .column {
+      flex: 1;
+      min-width: 300px;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-bottom: 10px;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>BNGL Expression Expander</h2>
+
+  <div class="container">
+    <div class="column">
+      <label for="moltext">Molecule Types (BNGL Format):</label><br>
+      <textarea id="moltext">A(a,b)
+B(x~Y,z)</textarea>
+    </div>
+
+    <div class="column">
+      <label for="expr">Enter BNGL Expression:</label><br>
+      <textarea id="expr">(A(a~U),B(b))</textarea>
+    </div>
+  </div>
+
+  <button onclick="expand()">Expand</button>
+
+  <h3>Result:</h3>
+  <pre id="result"></pre>
+
+  <div id="diagram"></div>
+
+  <script>
+    function moleculeSiteDict(moleculeLines) {
+      const molSiteDict = {};
+
+      for (const line of moleculeLines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("#") || !trimmed.includes("(")) continue;
+
+        const match = trimmed.match(/^(\w+)\((.*?)\)/);
+        if (!match) continue;
+
+        const molecule = match[1];
+        const sitesBlock = match[2];
+        const sites = sitesBlock
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+
+        molSiteDict[molecule] = sites;
+      }
+
+      return molSiteDict;
+    }
+
+    function expandExpr(bnglExpr, molSiteDict) {
+      const chunks = bnglExpr.split('.');
+      const expandedChunks = [];
+
+      for (let chunk of chunks) {
+        chunk = chunk.trim();
+
+        if (chunk.includes('(') && chunk.includes(')')) {
+          const molEndIdx = chunk.indexOf('(');
+          const exprEndIdx = chunk.indexOf(')');
+          const molName = chunk.slice(0, molEndIdx);
+          const inside = chunk.slice(molEndIdx + 1, exprEndIdx);
+
+          const givenSites = {};
+          for (const s of inside.split(',')) {
+            const trimmed = s.trim();
+            const sBase = trimmed.split('~')[0].split('!')[0];
+            givenSites[sBase] = trimmed;
+          }
+
+          const sites = molSiteDict[molName] || [];
+          const allSites = [];
+
+          for (let site of sites) {
+            const base = site.split('~')[0].split('!')[0];
+            if (givenSites.hasOwnProperty(base)) {
+              let s = givenSites[base];
+              if (!s.includes('!')) {
+                s += '!-';
+              }
+              allSites.push(s);
+            } else {
+              site += '!?';
+              allSites.push(site);
+            }
+          }
+
+          expandedChunks.push(`${molName}(${allSites.join(',')})`);
+        } else {
+          expandedChunks.push(chunk);
+        }
+      }
+
+      return expandedChunks.join('.');
+    }
+
+    function expand() {
+      const expr = document.getElementById('expr').value;
+      const molLines = document.getElementById('moltext').value.split('\n');
+      const molSiteDict = moleculeSiteDict(molLines);
+
+      const result = expandExpr(expr, molSiteDict);
+      document.getElementById('result').textContent = result;
+      bnglToRailroad(result); // Draws the diagram
+
+    }
+
+    function bnglToRailroad(bnglString, containerId = "diagram") {
+        const container = document.getElementById(containerId);
+        container.innerHTML = ""; // Clear any previous diagram
+
+        const molChunks = bnglString.split(".");
+        const diagramItems = [];
+
+        molChunks.forEach(chunk => {
+            const match = chunk.trim().match(/^(\w+)\((.*?)\)$/);
+            if (!match) return;
+
+            const moleculeName = match[1];
+            const siteBlock = match[2];
+            const sites = siteBlock.split(",").map(s => s.trim());
+
+            const siteGroup = [];
+
+            // Molecule name box
+            siteGroup.push(new Terminal(moleculeName));
+
+            sites.forEach(site => {
+            let siteName = site;
+            let state = null;
+            let bond = null;
+
+            if (site.includes("~")) {
+                const [before, after] = site.split("~");
+                siteName = before;
+                if (after.includes("!")) {
+                const [statePart, bondPart] = after.split("!");
+                state = statePart;
+                bond = bondPart;
+                } else {
+                state = after;
+                }
+            } else if (site.includes("!")) {
+                const [before, bondPart] = site.split("!");
+                siteName = before;
+                bond = bondPart;
+            }
+
+            const siteParts = [new Terminal(siteName)];
+            if (state) siteParts.push(new Terminal("~" + state));
+            if (bond) siteParts.push(new Terminal("!" + bond));
+
+            siteGroup.push(new Sequence(...siteParts));
+            });
+
+            diagramItems.push(new Sequence(...siteGroup));
+        });
+
+        const diagram = new Diagram(...diagramItems);
+        container.appendChild(diagram.format());
+        }
+
+  </script>
+
+</body>
+</html>
