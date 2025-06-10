@@ -1,4 +1,5 @@
 import re
+import sys
 
 MoleculeColor = 'lightgreen'
 SiteColor = 'lightblue'
@@ -11,6 +12,7 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
     else:
         diagrams = [f'add("{bngl_string.strip()}",', "    Diagram("]
 
+    molecule_counter = {}
     for idx, chunk in enumerate(mol_chunks):
         mol_match = re.match(r"(\w+)\((.*)\)", chunk.strip())
         if not mol_match:
@@ -18,6 +20,11 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
             continue
         
         molecule_name, site_block = mol_match.groups()
+        if molecule_name in molecule_counter:
+            molecule_counter[molecule_name] +=1
+        else:
+            molecule_counter[molecule_name] =1
+        molecule_instance = f'{molecule_name} #{molecule_counter[molecule_name]}'
         sites = [s.strip() for s in site_block.split(',')]
 
         diagrams.append(f'        Terminal("{molecule_name}", box_color="{MoleculeColor}"),')
@@ -26,6 +33,7 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
         for site in sites:
             bond_arg = ""
             bond_num_arg = ""
+            bond_type_arg = ""
             bond_num = None
 
             site_name = site
@@ -42,6 +50,7 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
                 for state_idx, state in enumerate(states):
                     bond_arg = ""
                     bond_num_arg = ""
+                    bond_type_arg = ""
                     if "!" in state:
                         state_split = state.split("!")
                         state_name = state_split[0]
@@ -61,11 +70,25 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
                         elif bond_num.isdigit():
                             bond_arg = ', bottom_bind=True'
                             bond_num_arg = f', bond_num="{bond_num}"'
+                        if changes_dict:
+                            changes = changes_dict.get(f'{molecule_instance}:{site_name}')
+                            if changes and any(change in (bond_added_non_rev, bond_removed_non_rev, bond_added_rev, bond_removed_rev) for change in changes["change"]):
+                                bond_changes = [bond_added_non_rev, bond_removed_non_rev, bond_added_rev, bond_removed_rev]
+                                bond_change = [change for change in changes["change"] if change in bond_changes]
+                                bond_type_arg = f', bond_type="{"".join(bond_change)}"'
+                                if bond_num == "-":
+                                    num_arg = changes["product"].split("!")[1]
+                                    bond_arg = ', bottom_bind=True'
+                                    bond_num_arg = f', bond_num="{num_arg}"'
+                                elif bond_num.isdigit():
+                                    bond_arg = ', bottom_bind=True'
+                                    bond_num_arg = f', bond_num="{bond_num}"'
+                                
                         state = state_name
                     if changes_dict:
-                        changes = changes_dict.get(f'{molecule_name}:{site_name}')
-                        if changes and (changes["change"] == state_change_up or changes["change"] == state_change_down):
-                            direction = "down-arrow" if changes["change"] == state_change_down else "up-arrow"
+                        changes = changes_dict.get(f'{molecule_instance}:{site_name}')
+                        if changes and (state_change_up in changes["change"] or state_change_down in changes["change"]):
+                            direction = "down-arrow" if (state_change_down in changes["change"]) else "up-arrow"
                             reactant_state = changes["reactant"].split("~")[-1].split("!")[0]
                             product_state = changes["product"].split("~")[-1].split("!")[0]
 
@@ -74,12 +97,17 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
                                     state_list = [s.split("!")[0] for s in mol_site.split("~")[1:]]
                                     break
                             ordered_states = [s for s in state_list if s in (reactant_state, product_state)]
-                            all_states = [f'NonTerminal("{s}", box_color="{StateColor}")' for s in ordered_states]
+                            all_states = []
+                            for s in ordered_states:
+                                bond_args = ""
+                                if s == state:
+                                    bond_args = f"{bond_arg}{bond_num_arg}{bond_type_arg}"
+                                all_states.append(f'NonTerminal("{s}", box_color="{StateColor}"{bond_args})')
                             fin_states = [f'MultipleChoice(0, "{direction}", {", ".join(all_states)})']
                         else:
-                            fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg})')
+                            fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg}{bond_type_arg})')
                     else:
-                            fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg})')
+                            fin_states.append(f'NonTerminal("{state}", box_color="{StateColor}"{bond_arg}{bond_num_arg}{bond_type_arg})')
 
                 state_choices = ', '.join(fin_states)
                 site_code = f'''    Choice(0, Comment("    "), Sequence(Terminal("{site_name}", box_color='{SiteColor}'), Choice(0, Comment("    "), {state_choices}))),'''
@@ -97,7 +125,24 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
                     elif bond_num.isdigit():
                         bond_arg = ', bottom_bind=True'
                         bond_num_arg = f', bond_num="{bond_num}"'
-                site_code = f'''    Choice(0, Comment("    "), Terminal("{site_name}", box_color='{SiteColor}'{bond_arg}{bond_num_arg})),'''
+
+                if changes_dict:
+                    changes = changes_dict.get(f'{molecule_instance}:{site_name}')
+                    if changes and any(change in (bond_added_non_rev, bond_removed_non_rev, bond_added_rev, bond_removed_rev) for change in changes["change"]):
+                        bond_changes = [bond_added_non_rev, bond_removed_non_rev, bond_added_rev, bond_removed_rev]
+                        bond_change = [change for change in changes["change"] if change in bond_changes]
+                        bond_type_arg = f', bond_type="{"".join(bond_change)}"'
+                        if bond_num == "-":
+                            num_arg = changes["product"].split("!")[1]
+                            bond_arg = ', bottom_bind=True'
+                            bond_num_arg = f', bond_num="{num_arg}"'
+                        if bond_num.isdigit():
+                            bond_arg = ', bottom_bind=True'
+                            bond_num_arg = f', bond_num="{bond_num}"'
+
+                        
+
+                site_code = f'''    Choice(0, Comment("    "), Terminal("{site_name}", box_color='{SiteColor}'{bond_arg}{bond_num_arg}{bond_type_arg})),'''
             
             diagrams.append(site_code)
         if idx < len(mol_chunks)-1:
@@ -105,6 +150,22 @@ def bngl_to_railroad(bngl_string, display_string=None, changes_dict=None):
 
     diagrams.append("    )\n)")
     return "\n".join(diagrams) + "\n"
+
+def join_lines(lines):
+    joined_lines = []
+    line_string = ""
+    for line in lines:
+        line = line.strip()
+        if line.endswith("\\"):
+            line_string += line[:-1] + " "
+        else:
+            line_string += line
+            joined_lines.append(line_string)
+            line_string = ""
+    if line_string:
+        joined_lines.append(line_string)
+
+    return joined_lines
 
 
 # take .bngl file as input
@@ -114,6 +175,7 @@ with open(file, 'r') as f:
     print('\nOpening file for reading:', file)
     lines = f.readlines()
 lines = [line.strip() for line in lines]
+lines = join_lines(lines)
 
 output_file = filepath + '_output.py'
 
@@ -138,24 +200,23 @@ begin_index = None
 end_index = None
 
 for index, line in enumerate(lines):
-    if line.lower().startswith("begin molecule types"):
+    if line.lower().startswith("begin molecule types") or line.lower().startswith("begin molecules"):
             begin_index = index
-    elif line.lower().startswith("end molecule types"):
+    elif line.lower().startswith("end molecule types") or line.lower().startswith("end molecules"):
             end_index = index
             break
     
 if begin_index is None and end_index is None: 
     print('No molecule types found in the file.')
+    sys.exit()
     
 molecule_lines = [lines[i].strip() for i in range(begin_index + 1, end_index)]
 mol_site_dict = molecule_site_dict(molecule_lines)
-print(mol_site_dict)
 converted_lines = []
 for line in molecule_lines:
     if line.startswith('#'):
         continue  # Skip empty lines and comments
     converted_lines.append(bngl_to_railroad(line))
-
 
 
 # process species
@@ -169,8 +230,10 @@ for index, line in enumerate(lines):
             end_species = index
             break
 
+
 if begin_species is None and end_species is None:
     print('No species found in the file.')
+    species_lines = []
 else:
     species_lines = [lines[i].strip() for i in range(begin_species + 1, end_species)]
 
@@ -212,6 +275,7 @@ for index, line in enumerate(lines):
 
 if begin_obs is None and end_obs is None:
     print('No observables found in the file.')
+    obs_lines = []
 else:
     obs_lines = [lines[i].strip() for i in range(begin_obs + 1, end_obs)]
 
@@ -233,15 +297,16 @@ end_reaction = None
 
 
 for index, line in enumerate(lines):
-   if line.lower().startswith("begin reaction rules"):
+   if line.lower().startswith("begin reaction"):
            begin_reaction = index
-   elif line.lower().startswith("end reaction rules"):
+   elif line.lower().startswith("end reaction"):
            end_reaction = index
            break
 
 
 if begin_reaction is None and end_reaction is None:
    print('No reaction rules found in the file.')
+   reaction_lines = []
 else:
     reaction_lines = [lines[i].strip() for i in range(begin_reaction + 1, end_reaction)]
 
@@ -308,17 +373,20 @@ with open(output_file, "w") as of:
     for diagram in converted_lines:
         of.write(f"\n{diagram}")
     
-    of.write('sys.stdout.write("<h1>Species</h1>\\n")\n\n')
-    for species in converted_species:
-        of.write(f"\n{species}")
-    
-    of.write('sys.stdout.write("<h1>Observables</h1>\\n")\n\n')
-    for obs in converted_obs:
-        of.write(f"\n{obs}")
-    
-    of.write('sys.stdout.write("<h1>Reactions</h1>\\n")\n\n')
-    for reaction in converted_reaction:
-        of.write(f"\n{reaction}")
+    if converted_species:
+        of.write('sys.stdout.write("<h1>Species</h1>\\n")\n\n')
+        for species in converted_species:
+            of.write(f"\n{species}")
+        
+    if converted_obs:
+        of.write('sys.stdout.write("<h1>Observables</h1>\\n")\n\n')
+        for obs in converted_obs:
+            of.write(f"\n{obs}")
+
+    if converted_reaction:
+        of.write('sys.stdout.write("<h1>Reactions</h1>\\n")\n\n')
+        for reaction in converted_reaction:
+            of.write(f"\n{reaction}")
 
 print(f"\nBNGL to Python conversion complete. Output saved to {output_file}.")
 
