@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BNGL Diagram Visualizer</title>
+
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    .section { margin-bottom: 1.5em; }
+    label { display: block; margin-top: 0.5em; }
+    canvas { border: 1px solid #ccc; margin-top: 1em; }
+    #output { display: flex; gap: 2em; margin-top: 2em; }
+    #bnglOutput {
+      white-space: pre-wrap;
+      background: #f9f9f9;
+      padding: 1em;
+      border: 1px solid #ddd;
+      width: 40%;
+      max-height: 600px;
+      overflow: auto;
+      display: block;
+    }
+    #diagramArea { width: 60%; }
+  </style>
+</head>
+<body>
+  <h1>BNGL to Diagram Visualizer</h1>
+
+  <div class="section">
+    <label for="bnglFile">Input BNGL File:</label>
+    <input type="file" id="bnglFile" accept=".bngl" />
+
+    <label><input type="checkbox" id="showComments" /> Display BNGL next to cartoons</label>
+    <label><input type="checkbox" id="useBNGLNotations" /> Use BNGL notations</label>
+
+    <button id="visualizeBtn">Visualize</button>
+  </div>
+
+  <div id="output">
+    <div id="bnglOutput">(BNGL diagram output will appear here)</div>
+    <div id="diagramArea">
+      <canvas id="diagramCanvas" width="800" height="600"></canvas>
+      <button id="saveBtn">Save Diagram</button>
+    </div>
+  </div>
+
+  <!-- Module script for logic -->
+  <script type="module">
+    import { parseBNGLFile } from './bngl_parser.js';
+
+    let bnglText = '';
+
+    document.getElementById("bnglFile").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        bnglText = e.target.result;
+        console.log("✅ BNGL file loaded:", bnglText.slice(0, 200));
+      };
+      if (file) reader.readAsText(file);
+    });
+
+    document.getElementById("visualizeBtn").addEventListener("click", async () => {
+      if (!bnglText || typeof bnglText !== "string") {
+        alert("Please upload a valid BNGL file first.");
+        return;
+      }
+
+      try {
+        const output = await parseBNGLFile(bnglText);
+        const outputBox = document.getElementById("bnglOutput");
+        outputBox.style.display = "block";
+        outputBox.textContent = output || "(No output generated)";
+        console.log("✅ Diagram code generated");
+
+        const canvas = document.getElementById("diagramCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "14px monospace";
+        ctx.fillText("Diagram code shown at left. Diagram rendering TBD.", 10, 30);
+
+      } catch (err) {
+        alert("An error occurred while processing the BNGL file. Check the console.");
+        console.error("❌ Error during processing:", err);
+      }
+    });
+
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      const text = document.getElementById("bnglOutput").textContent;
+      const blob = new Blob([text], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "diagram_output.txt";
+      a.click();
+    });
+  </script>
+</body>
+</html>
