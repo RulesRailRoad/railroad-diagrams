@@ -5,8 +5,6 @@
   <title>BNGL Expander</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 10px; }
-    pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; }
     .container {
       display: flex;
       gap: 30px;
@@ -21,14 +19,14 @@
     textarea {
       width: 100%;
       height: 90px;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
 
     pre {
       background: #f0f0f0;
       padding: 10px;
       white-space: pre-wrap;
-      max-height: 400px; /* Set the desired max height */
+      max-height: 300px; /* Set the desired max height */
       overflow: auto;    /* Enable scrollbars if content overflows */
     }
 
@@ -53,10 +51,9 @@
         <small>Will extract content for <code>molecules</code>, <code>observables</code>, and <code>reactions</code></small>
       </div>
 
-      <label for="moltext">Molecule Types (BNGL Format):</label><br>
+      <label for="moltext">Molecule Types and Expressions (BNGL Format):</label><br>
       <textarea id="moltext"></textarea><br>
 
-      <label for="expr">Enter BNGL Expression:</label><br>
       <textarea id="expr"></textarea><br>
 
       <button onclick="expand()">Expand</button>
