@@ -1009,7 +1009,7 @@ class End(DiagramItem):
 class EndWhiteSpace(DiagramItem):
     def __init__(self, type: str = "simple"):
             DiagramItem.__init__(self, "path")
-            self.width = 20
+            self.width = 10
             self.up = 10
             self.down = 10
             self.type = type
@@ -1019,7 +1019,7 @@ class EndWhiteSpace(DiagramItem):
             if self.type == "simple":
                 self.attrs["d"] = (
                     f"M {x} {y - 10} v 20 "            
-                    f"M {x + 20} {y - 10} v 20"         
+                    f"M {x + 10} {y - 10} v 20"         
                 )
             elif self.type == "complex":
                 self.attrs["d"] = (
@@ -1110,7 +1110,7 @@ class Terminal(DiagramItem):
                 path.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path.addTo(self)
             else:
-                horiz_dist = self.width / 2 - AR
+                horiz_dist = width / 2 - AR
                 path1 = Path(x, y + self.height).arc("nw").arc("ws").right(horiz_dist).arc("ne").down(self.height)
 
                 style = f"stroke: {self.bottom_bind_color}"
@@ -1121,7 +1121,7 @@ class Terminal(DiagramItem):
                 path1.attrs["style"] = style
                 path1.addTo(self)
 
-                path2 = Path(x + self.width, y + self.height).arc("ne").arc("es").left(horiz_dist).arc("nw").down(self.height)
+                path2 = Path(x + width, y + self.height).arc("ne").arc("es").left(horiz_dist).arc("nw").down(self.height)
                 path2.attrs["class"] = "bottom-bind"
                 path2.attrs["style"] = style
                 path2.addTo(self)
@@ -1292,18 +1292,18 @@ class NonTerminal(DiagramItem):
                 arc_height = AR*1.5
 
                 path1 = Path(arc_start, y-AR/2)
-                path1.down(arc_height).arc('ws').right((self.width)/2-AR).arc('ne')
+                path1.down(arc_height).arc('ws').right((width)/2-AR).arc('ne')
                 path1.attrs["class"] = "bottom-bind"
                 path1.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path1.addTo(self)
 
-                path2 = Path(x + AR + self.width, y-AR/2)
-                path2.down(arc_height).arc("es").left(self.width/2-AR).arc("nw")
+                path2 = Path(x + AR + width, y-AR/2)
+                path2.down(arc_height).arc("es").left(width/2-AR).arc("nw")
                 path2.attrs["class"] = "bottom-bind"
                 path2.attrs["style"] = f"stroke: gray; stroke-dasharray: 4,2"
                 path2.addTo(self)
             else:
-                horiz_dist = self.width / 2 - AR
+                horiz_dist = width / 2 - AR
                 path1 = Path(x, y + self.height).arc("nw").arc("ws").right(horiz_dist).arc("ne").down(self.height)
 
                 style = f"stroke: {self.bottom_bind_color}"
@@ -1314,7 +1314,7 @@ class NonTerminal(DiagramItem):
                 path1.attrs["style"] = style
                 path1.addTo(self)
 
-                path2 = Path(x + self.width, y + self.height).arc("ne").arc("es").left(horiz_dist).arc("nw").down(self.height)
+                path2 = Path(x + width, y + self.height).arc("ne").arc("es").left(horiz_dist).arc("nw").down(self.height)
                 path2.attrs["class"] = "bottom-bind"
                 path2.attrs["style"] = style
                 path2.addTo(self)
@@ -1323,13 +1323,13 @@ class NonTerminal(DiagramItem):
                     cx=0
                     cy=0
                     if self.bond_type == 'circle':
-                        cx = x +leftGap/2+ self.width / 2
+                        cx = x + width / 2
                         cy = y + self.height + AR * 4
                         term = Terminal(self.bond_num, box_color="white")
                         term.width *= 0.78
                         term.format(cx - term.width / 2, cy, term.width).addTo(self)
                     if self.bond_type == 'nrbroken':
-                        cx = x +leftGap/2+ self.width / 2
+                        cx = x + width / 2
                         cy = y + self.height + AR * 5
                         up = NonTerminal("⬆", box_color="orange")
                         up_height = up.up + up.down -2
@@ -1340,7 +1340,7 @@ class NonTerminal(DiagramItem):
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'nradded':
-                        cx = x +leftGap/2+ self.width / 2
+                        cx = x + width / 2
                         cy = y + self.height + AR * 5
                         up = NonTerminal("⬇", box_color="orange")
                         up_height = up.up + up.down -2
@@ -1351,7 +1351,7 @@ class NonTerminal(DiagramItem):
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'radded':
-                        cx = x +leftGap/2+ self.width / 2
+                        cx = x + width / 2
                         cy = y + self.height + AR * 5
                         up = NonTerminal("⬆⬇", box_color="orange")
                         up_height = up.up + up.down -2
@@ -1361,7 +1361,7 @@ class NonTerminal(DiagramItem):
                         down = NonTerminal(self.bond_num, box_color="white")
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
-                        cx = x +leftGap/2+ self.width / 2
+                        cx = x + width / 2
                         cy = y + self.height + AR * 5
                         up = NonTerminal("⬆⬇", box_color="orange")
                         up_height = up.up + up.down -2
