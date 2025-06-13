@@ -1,0 +1,55 @@
+begin model
+
+begin parameters
+  k_enter 1.0         # train enters track segment
+  k_exit 1.0          # train exits track segment
+  k_block 0.5         # signal turns red when segment occupied
+  k_clear 0.5         # signal turns green when segment free
+  k_lower 1.0         # crossing gate lowers
+  k_raise 1.0         # crossing gate raises
+end parameters
+
+begin molecule types
+  Train(state~moving~stopped, track)
+  TrackSegment(occupancy~free~occupied, signal~green~red, train)
+  Crossing(state~open~closed, sensor~inactive~active)
+end molecule types
+
+begin seed species
+  Train(state~moving, track) 10
+  TrackSegment(occupancy~free, signal~green, train) 5
+  Crossing(state~open, sensor~inactive) 2
+end seed species
+
+begin observables
+  Molecules TrainsOnTrack Train(track!+)
+  Molecules FreeTracks TrackSegment(occupancy~free)
+  Molecules RedSignals TrackSegment(signal~red)
+  Molecules ClosedCrossings Crossing(state~closed)
+end observables
+
+begin reaction rules
+  # Train enters a free track segment
+  enter_track: Train(state~moving, track) + TrackSegment(occupancy~free, train, signal~green) -> Train(state~moving, track!1).TrackSegment(occupancy~occupied, train!1, signal~green) k_enter
+
+  # Track occupancy triggers signal to turn red
+  block_signal: TrackSegment(occupancy~occupied, signal~green) -> TrackSegment(occupancy~occupied, signal~red) k_block
+
+  # Train exits the track
+  exit_track: Train(state~moving, track!1).TrackSegment(occupancy~occupied, train!1, signal~red) -> Train(state~moving, track) + TrackSegment(occupancy~free, train, signal~red) k_exit
+
+  # Signal turns green when track becomes free
+  clear_signal: TrackSegment(occupancy~free, signal~red) -> TrackSegment(occupancy~free, signal~green) k_clear
+
+  # Train activates crossing sensor
+  activate_crossing: Train(state~moving) + Crossing(sensor~inactive) -> Train(state~moving) + Crossing(sensor~active) 0.5
+
+  # Sensor causes gate to lower
+  lower_gate: Crossing(state~open, sensor~active) -> Crossing(state~closed, sensor~active) k_lower
+
+  # Sensor deactivates, gate raises
+  raise_gate: Crossing(state~closed, sensor~active) -> Crossing(state~open, sensor~inactive) k_raise
+
+end reaction rules
+
+end model
