@@ -177,7 +177,7 @@
         const rateConstantsAndComment = rhsParts.slice(1).join('  ');
 
         const expandSide = (side) =>
-          side.split('+').map(part => {
+          side.split(/(?<!!)\+/).map(part => {
             const trimmed = part.trim();
             const moleculeParts = trimmed.split('.');
 

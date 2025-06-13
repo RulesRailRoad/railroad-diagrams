@@ -37,7 +37,7 @@ export function moleculeSiteDict(lines) {
     return dict;
 }
 
-export async function parseBNGLFile(fileText, useBNGL) {
+export async function parseBNGLFile(fileText, useBNGL, showComments) {
     const lines = joinLines(fileText.split(/\r?\n/).map(l => l.trim()));
     const output = [];
 
@@ -64,6 +64,8 @@ export async function parseBNGLFile(fileText, useBNGL) {
         return start !== -1 && end !== -1 ? lines.slice(start + 1, end) : [];
     };
 
+    let lastComment = null
+
     const moleculeLines = getBlockFlexible(["begin molecule types", "begin molecules"], ["end molecule types", "end molecules"]);
     const molSiteDict = moleculeSiteDict(moleculeLines);
     const moleculesLabel = useBNGL ? "Molecules" : "Interacting Agents";
@@ -73,6 +75,18 @@ export async function parseBNGLFile(fileText, useBNGL) {
     ');'
     );
     for (const line of moleculeLines) {
+            if (!line) continue;
+
+            if (line.startsWith('#')) {
+                lastComment = line.slice(1).trim();
+                if (showComments) {
+                    output.push(
+                    'document.getElementById("diagramArea").appendChild(' +
+                        `Object.assign(document.createElement("h4"), { textContent: "${lastComment}" })` +
+                    ');');
+                }
+                continue;
+            }
         if (!line.startsWith('#')) {
             output.push(bnglToRailroad(line, null, null, molSiteDict));
         }
@@ -87,7 +101,18 @@ export async function parseBNGLFile(fileText, useBNGL) {
         ');'
         );
         for (const line of speciesLines) {
-            if (!line || line.startsWith('#')) continue;
+            if (!line) continue;
+
+            if (line.startsWith('#')) {
+                lastComment = line.slice(1).trim();
+                if (showComments) {
+                    output.push(
+                    'document.getElementById("diagramArea").appendChild(' +
+                        `Object.assign(document.createElement("h4"), { textContent: "${lastComment}" })` +
+                    ');');
+                }
+                continue;
+            }
             const parts = line.split(/\s+/);
             let species = parts.find(p => p.includes('(') && p.includes(')')) || '';
             if (species.includes(':')) species = species.split(':')[1];
@@ -103,7 +128,18 @@ export async function parseBNGLFile(fileText, useBNGL) {
         ');'
         );
         for (const line of obsLines) {
-            if (!line || line.startsWith('#')) continue;
+            if (!line) continue;
+
+            if (line.startsWith('#')) {
+                lastComment = line.slice(1).trim();
+                if (showComments) {
+                    output.push(
+                    'document.getElementById("diagramArea").appendChild(' +
+                        `Object.assign(document.createElement("h4"), { textContent: "${lastComment}" })` +
+                    ');');
+                }
+                continue;
+            }
             const parts = line.split(/\s+/);
             let expr = parts.slice(2).join(' ');
             if (expr.includes(':')) expr = expr.split(':')[1];
@@ -121,7 +157,18 @@ export async function parseBNGLFile(fileText, useBNGL) {
         ');'
         );
         for (let line of reactionLines) {
-            if (!line || line.startsWith('#')) continue;
+            if (!line) continue;
+
+            if (line.startsWith('#')) {
+                lastComment = line.slice(1).trim();
+                if (showComments) {
+                    output.push(
+                    'document.getElementById("diagramArea").appendChild(' +
+                        `Object.assign(document.createElement("h4"), { textContent: "${lastComment}" })` +
+                    ');');
+                }
+                continue;
+            }
 
             if (/^[^:\s]+:\s*/.test(line)) {
                 line = line.replace(/^[^:\s]+:\s*/, '');
