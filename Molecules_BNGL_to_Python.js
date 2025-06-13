@@ -15,7 +15,7 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
     const molChunks = bnglString.split('.');
     const diagrams = [
         `add(\"${(displayString || bnglString).trim()}\",`,
-        "    Diagram("
+        "    new Diagram("
     ];
 
     const moleculeCounter = {};
@@ -31,7 +31,7 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
         moleculeCounter[moleculeName] = (moleculeCounter[moleculeName] || 0) + 1;
         const moleculeInstance = `${moleculeName} #${moleculeCounter[moleculeName]}`;
 
-        diagrams.push(`        Terminal(\"${moleculeName}\", box_color=\"${MoleculeColor}\"),`);
+        diagrams.push(`        new Terminal(\"${moleculeName}\", { box_color: \"${MoleculeColor}\" }),`);
 
         const sites = siteBlock.split(',').map(s => s.trim());
 
@@ -60,30 +60,29 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                         stateName = splitState[0];
                         bondNum = splitState[1];
 
-                        // Match Python logic: last state with ? gets bottom bind and wrap
                         if (states.length > 1 && stateIdx === states.length - 1 && bondNum === "?") {
-                            states[states.length - 1] = stateName;  // Remove bond symbol
-                            finStates.push(`NonTerminal(\"${stateName}\", box_color=\"${StateColor}\", bottom_bind=True, wrap=True)`);
-                            return; // continue
+                            states[states.length - 1] = stateName;
+                            finStates.push(`new NonTerminal(\"${stateName}\", { box_color: \"${StateColor}\", bottom_bind: true, wrap: true })`);
+                            return;
                         }
 
                         if (bondNum === "?") {
-                            bondArg = ', bottom_bind=True, bottom_bind_color="gray"';
-                            bondNumArg = `, bond_num=\"${bondNum}\"`;
+                            bondArg = ', bottom_bind: true, bottom_bind_color: \"gray\"';
+                            bondNumArg = `, bond_num: \"${bondNum}\"`;
                         } else if (bondNum === "+" || /\d+/.test(bondNum)) {
-                            bondArg = ', bottom_bind=True';
-                            bondNumArg = `, bond_num=\"${bondNum}\"`;
+                            bondArg = ', bottom_bind: true';
+                            bondNumArg = `, bond_num: \"${bondNum}\"`;
                         }
 
                         if (changesDict) {
                             const changes = changesDict[`${moleculeInstance}:${siteName}`];
                             if (changes && changes.change.some(c => [bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev].includes(c))) {
                                 const bondChange = changes.change.find(c => [bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev].includes(c));
-                                bondTypeArg = `, bond_type=\"${bondChange}\"`;
+                                bondTypeArg = `, bond_type: \"${bondChange}\"`;
                                 if (bondNum === "-") {
                                     const numArg = changes.product.split("!")[1];
-                                    bondArg = ', bottom_bind=True';
-                                    bondNumArg = `, bond_num=\"${numArg}\"`;
+                                    bondArg = ', bottom_bind: true';
+                                    bondNumArg = `, bond_num: \"${numArg}\"`;
                                 }
                             }
                         }
@@ -108,19 +107,19 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                             const ordered = stateList.filter(s => [reactantState, productState].includes(s));
                             const allStates = ordered.map(s => {
                                 const match = s === state ? `${bondArg}${bondNumArg}${bondTypeArg}` : "";
-                                return `NonTerminal(\"${s}\", box_color=\"${StateColor}\"${match})`;
+                                return `new NonTerminal(\"${s}\", { box_color: \"${StateColor}\"${match} })`;
                             });
-                            finStates.push(`MultipleChoice(0, \"${direction}\", ${allStates.join(", ")})`);
+                            finStates.push(`new MultipleChoice(0, \"${direction}\", ${allStates.join(", ")})`);
                         } else {
-                            finStates.push(`NonTerminal(\"${state}\", box_color=\"${StateColor}\"${bondArg}${bondNumArg}${bondTypeArg})`);
+                            finStates.push(`new NonTerminal(\"${state}\", { box_color: \"${StateColor}\"${bondArg}${bondNumArg}${bondTypeArg} })`);
                         }
                     } else {
-                        finStates.push(`NonTerminal(\"${state}\", box_color=\"${StateColor}\"${bondArg}${bondNumArg}${bondTypeArg})`);
+                        finStates.push(`new NonTerminal(\"${state}\", { box_color: \"${StateColor}\"${bondArg}${bondNumArg}${bondTypeArg} })`);
                     }
                 });
 
                 const stateChoices = finStates.join(", ");
-                const siteCode = `    Choice(0, Comment(\"    \"), Sequence(Terminal(\"${siteName}\", box_color=\"${SiteColor}\"), Choice(0, Comment(\"    \"), ${stateChoices}))),`;
+                const siteCode = `    new Choice(0, new Comment(\"    \"), new Sequence(new Terminal(\"${siteName}\", { box_color: \"${SiteColor}\" }), new Choice(0, new Comment(\"    \"), ${stateChoices}))),`;
                 diagrams.push(siteCode);
             } else {
                 if (siteName.includes("!")) {
@@ -128,11 +127,11 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                     siteName = name;
                     bondNum = bond;
                     if (bondNum === "?") {
-                        bondArg = ', bottom_bind=True, bottom_bind_color="gray"';
-                        bondNumArg = `, bond_num=\"${bondNum}\"`;
+                        bondArg = ', bottom_bind: true, bottom_bind_color: \"gray\"';
+                        bondNumArg = `, bond_num: \"${bondNum}\"`;
                     } else if (bondNum === "+" || /\d+/.test(bondNum)) {
-                        bondArg = ', bottom_bind=True';
-                        bondNumArg = `, bond_num=\"${bondNum}\"`;
+                        bondArg = ', bottom_bind: true';
+                        bondNumArg = `, bond_num: \"${bondNum}\"`;
                     }
                 }
 
@@ -140,22 +139,22 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                     const changes = changesDict[`${moleculeInstance}:${siteName}`];
                     if (changes && changes.change.some(c => [bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev].includes(c))) {
                         const bondChange = changes.change.find(c => [bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev].includes(c));
-                        bondTypeArg = `, bond_type=\"${bondChange}\"`;
+                        bondTypeArg = `, bond_type: \"${bondChange}\"`;
                         if (bondNum === "-") {
                             const numArg = changes.product.split("!")[1];
-                            bondArg = ', bottom_bind=True';
-                            bondNumArg = `, bond_num=\"${numArg}\"`;
+                            bondArg = ', bottom_bind: true';
+                            bondNumArg = `, bond_num: \"${numArg}\"`;
                         }
                     }
                 }
 
-                const siteCode = `    Choice(0, Comment(\"    \"), Terminal(\"${siteName}\", box_color=\"${SiteColor}\"${bondArg}${bondNumArg}${bondTypeArg})),`;
+                const siteCode = `    new Choice(0, new Comment(\"    \"), new Terminal(\"${siteName}\", { box_color: \"${SiteColor}\"${bondArg}${bondNumArg}${bondTypeArg} })),`;
                 diagrams.push(siteCode);
             }
         });
 
         if (idx < molChunks.length - 1) {
-            diagrams.push("        EndWhiteSpace(),");
+            diagrams.push("        new EndWhiteSpace(),");
         }
     });
 

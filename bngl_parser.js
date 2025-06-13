@@ -37,7 +37,7 @@ export function moleculeSiteDict(lines) {
     return dict;
 }
 
-export async function parseBNGLFile(fileText) {
+export async function parseBNGLFile(fileText, useBNGL) {
     const lines = joinLines(fileText.split(/\r?\n/).map(l => l.trim()));
     const output = [];
 
@@ -66,8 +66,12 @@ export async function parseBNGLFile(fileText) {
 
     const moleculeLines = getBlockFlexible(["begin molecule types", "begin molecules"], ["end molecule types", "end molecules"]);
     const molSiteDict = moleculeSiteDict(moleculeLines);
-
-    output.push('sys.stdout.write("<h1>Molecules</h1>\\n")');
+    const moleculesLabel = useBNGL ? "Molecules" : "Interacting Agents";
+    output.push(
+    'document.getElementById("diagramArea").appendChild(' +
+        `Object.assign(document.createElement("h2"), { textContent: "${moleculesLabel}" })` +
+    ');'
+    );
     for (const line of moleculeLines) {
         if (!line.startsWith('#')) {
             output.push(bnglToRailroad(line, null, null, molSiteDict));
@@ -76,7 +80,12 @@ export async function parseBNGLFile(fileText) {
 
     const speciesLines = getBlockFlexible(["begin species", "begin seed species"], ["end species", "end seed species"]);
     if (speciesLines.length > 0) {
-        output.push('sys.stdout.write("<h1>Species</h1>\\n")');
+        const speciesLabel = useBNGL ? "Species" : "Initial Set of the Systems";
+        output.push(
+        'document.getElementById("diagramArea").appendChild(' +
+            `Object.assign(document.createElement("h2"), { textContent: "${speciesLabel}" })` +
+        ');'
+        );
         for (const line of speciesLines) {
             if (!line || line.startsWith('#')) continue;
             const parts = line.split(/\s+/);
@@ -88,7 +97,11 @@ export async function parseBNGLFile(fileText) {
 
     const obsLines = getBlockFlexible(["begin observables"], ["end observables"]);
     if (obsLines.length > 0) {
-        output.push('sys.stdout.write("<h1>Observables</h1>\\n")');
+        output.push(
+        'document.getElementById("diagramArea").appendChild(' +
+            'Object.assign(document.createElement("h2"), { textContent: "Observables" })' +
+        ');'
+        );
         for (const line of obsLines) {
             if (!line || line.startsWith('#')) continue;
             const parts = line.split(/\s+/);
@@ -101,28 +114,71 @@ export async function parseBNGLFile(fileText) {
 
     const reactionLines = getBlockFlexible(["begin reaction"], ["end reaction"]);
     if (reactionLines.length > 0) {
-        output.push('sys.stdout.write("<h1>Reactions</h1>\\n")');
+        const reactionsLabel = useBNGL ? "Reaction Rules" : "Rules of Interactions";
+        output.push(
+        'document.getElementById("diagramArea").appendChild(' +
+            `Object.assign(document.createElement("h2"), { textContent: "${reactionsLabel}" })` +
+        ');'
+        );
         for (let line of reactionLines) {
             if (!line || line.startsWith('#')) continue;
 
-            // Remove rule name and clean up @LOC: labels
-            if (line.includes(':')) line = line.split(':', 2)[1].trim();
-            line = line.replace(/@[A-Za-z]+:/g, '');
+            if (/^[^:\s]+:\s*/.test(line)) {
+                line = line.replace(/^[^:\s]+:\s*/, '');
+            }
 
-            const arrow = line.includes('<->') ? '<->' : (line.includes('->') ? '->' : null);
-            if (!arrow) continue;
+            let arrow = null;
+            if (line.includes('<->')) {
+                arrow = '<->';
+            } else if (line.includes('->')) {
+                arrow = '->';
+            } else {
+                continue;
+            }
 
-            const [lhsRaw, rhsRaw] = line.split(arrow).map(s => s.trim());
-            const lhs = lhsRaw.split(/[ \t]/)[0];
-            const rhs = rhsRaw.split(/[ \t]/)[0];
+            const parts = line.split(arrow);
+            let reactants_str = parts[0].trim();
+            let products_str = parts[1].trim();
 
-            const reactants = lhs.split('+').map(r => r.trim().split(':').pop().split(')')[0] + ')').join(' + ');
-            const products = rhs.split('+').map(p => p.trim().split(':').pop().split(')')[0] + ')').join(' + ');
+            const stripped_r = [];
+            const reactants = reactants_str.split(' + ');
+            for (let part of reactants) {
+                part = part.trim();
+                const endIdx = part.lastIndexOf(")");
+                if (endIdx !== -1) {
+                    part = part.slice(0, endIdx + 1);
+                }
+                if (part.includes(':')) {
+                    part = part.split(':')[1];
+                }
+                stripped_r.push(part);
+            }
+            reactants_str = stripped_r.join(' + ');
 
-            const expandedLHS = expandExpr(reactants.replace(/ \+ /g, '.'), molSiteDict);
-            const expandedRHS = expandExpr(products.replace(/ \+ /g, '.'), molSiteDict);
-            const display = `${reactants} ${arrow} ${products}`;
+            const stripped_p = [];
+            const products = products_str.split(' + ');
+            for (let part of products) {
+                part = part.trim();
+                const endIdx = part.lastIndexOf(")");
+                if (endIdx !== -1) {
+                    part = part.slice(0, endIdx + 1);
+                }
+                if (part.includes(':')) {
+                    part = part.split(':')[1];
+                }
+                stripped_p.push(part);
+            }
+            products_str = stripped_p.join(' + ');
 
+            const expandedLHS = expandExpr(reactants_str.replace(/ \+ /g, '.'), molSiteDict);
+            const expandedRHS = expandExpr(products_str.replace(/ \+ /g, '.'), molSiteDict);
+
+            if (!expandedLHS.includes('(') || !expandedRHS.includes('(')) {
+                console.warn("⚠️ Skipping malformed reaction:", reactants_str, '->', products_str);
+                continue;
+            }
+
+            const display = `${reactants_str} ${arrow} ${products_str}`;
             const changes = compareReactions(expandedLHS, expandedRHS, arrow, molSiteDict);
             output.push(bnglToRailroad(expandedLHS, display, changes, molSiteDict));
         }
