@@ -1,6 +1,8 @@
 import re
 import sys
 
+import filename
+
 MoleculeColor = 'lightgreen'
 SiteColor = 'lightblue'
 StateColor = 'khaki'
@@ -170,14 +172,18 @@ def join_lines(lines):
 
 # take .bngl file as input
 filepath = input('BNGL filepath: ')
-file = filepath + '.bngl'
+if filepath.endswith('.bngl'):
+    file = filepath
+else:
+    file = filepath + '.bngl'
+
 with open(file, 'r') as f:
     print('\nOpening file for reading:', file)
     lines = f.readlines()
 lines = [line.strip() for line in lines]
 lines = join_lines(lines)
 
-output_file = filepath + '_output.py'
+filename.output_file = filepath + '_output.py'
 
 
 # save molecules to dictionary
@@ -367,8 +373,8 @@ for line in reaction_lines:
     converted_reaction.append(reaction_diagram)
 
 # Write to .py file
-with open(output_file, "w") as of:
-    print('\nWriting to python file:', output_file)
+with open(filename.output_file, "w") as of:
+    print('\nWriting to python file:', filename.output_file)
     of.write('sys.stdout.write("<h1>Molecules</h1>\\n")\n\n')
     for diagram in converted_lines:
         of.write(f"\n{diagram}")
@@ -388,7 +394,7 @@ with open(output_file, "w") as of:
         for reaction in converted_reaction:
             of.write(f"\n{reaction}")
 
-print(f"\nBNGL to Python conversion complete. Output saved to {output_file}.")
+print(f"\nBNGL to Python conversion complete. Output saved to {filename.output_file}.")
 
 
 import railroad2

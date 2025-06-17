@@ -16,9 +16,9 @@ begin molecule types
 end molecule types
 
 begin seed species
-  Train(state~moving, track) 10
-  TrackSegment(occupancy~free, signal~green, train) 5
-  Crossing(state~open, sensor~inactive) 2
+  Train(state~moving,track) 10
+  TrackSegment(occupancy~free,signal~green,train) 5
+  Crossing(state~open,sensor~inactive) 2
 end seed species
 
 begin observables

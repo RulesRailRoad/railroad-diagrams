@@ -4,8 +4,10 @@ from __future__ import annotations
 import math as Math
 import sys
 
+import filename
+
 bond_coords = {}
-input_file = input('Python filepath: ')
+input_file = filename.output_file[:-3]
 print('\nOpening .html file for writing:', input_file+'.html')
 sys.stdout = open(input_file+'.html', 'w')
 
@@ -1132,50 +1134,50 @@ class Terminal(DiagramItem):
                     if self.bond_type == 'circle':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 4
-                        term = Terminal(self.bond_num, box_color="white")
+                        term = NonTerminal(self.bond_num, box_color="white")
                         term.width *= 0.78
                         term.format(cx - term.width / 2, cy, term.width).addTo(self)
                     if self.bond_type == 'nrbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬆", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬆", box_color="orange")
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'nradded':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬇", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬇", box_color="orange")
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'radded':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬆⬇", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
-                        up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬆⬇", box_color="orange")
+                        down.width*=0.78
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
                         cx = x + self.width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬆⬇", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
-                        up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬆⬇", box_color="orange") 
+                        down.width*=0.78
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     global bond_coords
                     if self.bond_type == 'circle':
@@ -1325,50 +1327,50 @@ class NonTerminal(DiagramItem):
                     if self.bond_type == 'circle':
                         cx = x + width / 2
                         cy = y + self.height + AR * 4
-                        term = Terminal(self.bond_num, box_color="white")
+                        term = NonTerminal(self.bond_num, box_color="white")
                         term.width *= 0.78
                         term.format(cx - term.width / 2, cy, term.width).addTo(self)
                     if self.bond_type == 'nrbroken':
                         cx = x + width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬆", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬆", box_color="orange")
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'nradded':
                         cx = x + width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬇", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
                         up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬇", box_color="orange")
                         down.width *= 0.75
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'radded':
                         cx = x + width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬆⬇", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
-                        up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬆⬇", box_color="orange")
+                        down.width*=0.78
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     if self.bond_type == 'rbroken':
                         cx = x + width / 2
                         cy = y + self.height + AR * 5
-                        up = NonTerminal("⬆⬇", box_color="orange")
+                        up = NonTerminal(self.bond_num, box_color="white")
                         up_height = up.up + up.down -2
-                        up.width *= 0.75
                         up.format(cx - up.width / 2, cy-up_height+up.up, up.width).addTo(self)
 
-                        down = NonTerminal(self.bond_num, box_color="white")
+                        down = NonTerminal("⬆⬇", box_color="orange")
+                        down.width*=0.78
                         down.format(cx-down.width/2, cy+up_height/2, down.width).addTo(self)
                     global bond_coords
                     if self.bond_type == 'circle':
