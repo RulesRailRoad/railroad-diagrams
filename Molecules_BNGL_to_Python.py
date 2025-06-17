@@ -324,6 +324,9 @@ for line in reaction_lines:
     
     if ":" in line:
         line = line.split(":", 1)[1].strip()
+    
+    if line and line[0].isdigit():
+        line = re.sub(r'^\d+\s+', '', line)
 
    # Split into reactants and products
     if '<->' in line:
@@ -361,8 +364,12 @@ for line in reaction_lines:
 
     display_string = f'{reactants_str} {arrow} {products_str}'
 
+    print(reactants_str)
+    print(products_str)
     expanded_reactants = expand_expr(reactants_str.replace(" + ", "."), mol_site_dict)
     expanded_products = expand_expr(products_str.replace(" + ", "."), mol_site_dict)
+    print("reactants:", expanded_reactants)
+    print("products:", expanded_products)
 
     # reaction rules
     from compare_reactions import *

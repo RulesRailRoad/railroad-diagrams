@@ -8,7 +8,7 @@
   <style>
     body { font-family: sans-serif; margin: 2em; }
     .section { margin-bottom: 1.5em; }
-    label { display: block; margin-top: 0.5em; }
+    label { display: block; margin-top: 0.2em; font-size: 0.92em;}
     #output { display: flex; gap: 2em; margin-top: 2em; }
     #bnglOutput {
       white-space: pre-wrap;
@@ -62,8 +62,9 @@
   <div class="section">
     <label for="bnglFile">Input BNGL File:</label>
     <input type="file" id="bnglFile" accept=".bngl" />
-    <label><input type="checkbox" id="showComments" /> Display BNGL next to cartoons</label>
-    <label><input type="checkbox" id="useBNGLNotations" /> Use BNGL notations</label>
+    <label><input type="checkbox" id="showComments" checked /> Display commented lines next to cartoons</label>
+    <label><input type="checkbox" id="showBNGLString" checked /> Display BNGL next to cartoons</label>
+    <label><input type="checkbox" id="useBNGLNotations" checked /> Use BNGL notations</label>
   </div>
 
   <button id="visualizeBtn">Visualize</button>
@@ -148,8 +149,9 @@
 
         try {
             const useBNGL = document.getElementById("useBNGLNotations").checked;
+            const showBNGLString = document.getElementById("showBNGLString").checked;
             const showComments = document.getElementById("showComments").checked;
-            const output = await parseBNGLFile(bnglText, useBNGL, showComments); // generates JS code
+            const output = await parseBNGLFile(bnglText, useBNGL, showComments, showBNGLString); // generates JS code
             bnglOutputBox.textContent = output || "(No output generated)";
 
             const script = document.createElement("script");

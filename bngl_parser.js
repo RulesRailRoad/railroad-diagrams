@@ -1,5 +1,5 @@
 // bngl_parser.js
-import { expandExpr } from './_expanded.js';
+import { expandExpr } from './expanded.js';
 import { compareReactions, stateChangeUp, stateChangeDown, bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev } from './compare_reactions.js';
 import { bnglToRailroad } from './Molecules_BNGL_to_Python.js';
 
@@ -37,7 +37,7 @@ export function moleculeSiteDict(lines) {
     return dict;
 }
 
-export async function parseBNGLFile(fileText, useBNGL, showComments) {
+export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLString) {
     const lines = joinLines(fileText.split(/\r?\n/).map(l => l.trim()));
     const output = [];
 
@@ -88,7 +88,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments) {
                 continue;
             }
         if (!line.startsWith('#')) {
-            output.push(bnglToRailroad(line, null, null, molSiteDict, useBNGL));
+            output.push(bnglToRailroad(line, null, null, molSiteDict, showBNGLString));
         }
     }
 
@@ -116,7 +116,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments) {
             const parts = line.split(/\s+/);
             let species = parts.find(p => p.includes('(') && p.includes(')')) || '';
             if (species.includes(':')) species = species.split(':')[1];
-            if (species) output.push(bnglToRailroad(species, null, null, molSiteDict, useBNGL));
+            if (species) output.push(bnglToRailroad(species, null, null, molSiteDict, showBNGLString));
         }
     }
 
@@ -144,7 +144,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments) {
             let expr = parts.slice(2).join(' ');
             if (expr.includes(':')) expr = expr.split(':')[1];
             const expanded = expandExpr(expr, molSiteDict);
-            output.push(bnglToRailroad(expanded, expr, null, molSiteDict, useBNGL));
+            output.push(bnglToRailroad(expanded, expr, null, molSiteDict, showBNGLString));
         }
     }
 
@@ -168,6 +168,10 @@ export async function parseBNGLFile(fileText, useBNGL, showComments) {
                     ');');
                 }
                 continue;
+            }
+
+            if (line && /^\d/.test(line)) {
+                line = line.replace(/^\d+\s+/, '');
             }
 
             if (/^[^:\s]+:\s*/.test(line)) {
@@ -227,7 +231,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments) {
 
             const display = `${reactants_str} ${arrow} ${products_str}`;
             const changes = compareReactions(expandedLHS, expandedRHS, arrow, molSiteDict);
-            output.push(bnglToRailroad(expandedLHS, display, changes, molSiteDict, useBNGL));
+            output.push(bnglToRailroad(expandedLHS, display, changes, molSiteDict, showBNGLString));
         }
     }
 
