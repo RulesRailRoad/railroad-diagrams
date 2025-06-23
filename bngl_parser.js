@@ -207,7 +207,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
             let products_str = parts[1].trim();
 
             const stripped_r = [];
-            const reactants = reactants_str.split(' + ');
+            const reactants = reactants_str.split(/(?<!!)\+/);
             for (let part of reactants) {
                 part = part.trim();
                 const endIdx = part.lastIndexOf(")");
@@ -222,7 +222,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
             reactants_str = stripped_r.join(' + ');
 
             const stripped_p = [];
-            const products = products_str.split(' + ');
+            const products = products_str.split(/(?<!!)\+/);
             for (let part of products) {
                 part = part.trim();
                 const endIdx = part.lastIndexOf(")");
@@ -238,16 +238,16 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
 
             const expandedLHS = expandExpr(reactants_str.replace(/ \+ /g, '.'), molSiteDict);
             const expandedRHS = expandExpr(products_str.replace(/ \+ /g, '.'), molSiteDict);
-            console.log(expandedLHS, arrow, expandedRHS);
 
             if (!expandedLHS.includes('(') || !expandedRHS.includes('(')) {
-                console.warn("⚠️ Skipping malformed reaction:", reactants_str, '->', products_str);
+                console.warn("⚠️ Skipping malformed reaction:", reactants_str, arrow, products_str);
                 continue;
             }
 
             const display = `${reactants_str} ${arrow} ${products_str}`;
             const changes = compareReactions(expandedLHS, expandedRHS, arrow, molSiteDict);
-            output.push(bnglToRailroad(expandedLHS, display, changes, molSiteDict, showBNGLString));
+            if (changes) {
+            output.push(bnglToRailroad(expandedLHS, display, changes, molSiteDict, showBNGLString));}
         }
     }
 
