@@ -424,7 +424,7 @@ export class Diagram extends DiagramMultiContainer {
         for (const coords of Object.values(bond_coords)) {
             if (coords.length >= 2) {
                 const [[x1, y1], [x2, y2]] = coords;
-                const offset = Math.min(Math.max(Math.abs(y2 - y1), i * 10), i * 8);
+                const offset = Math.min(Math.max(Math.abs(y2 - y1), i * 10), i * 8)+45;
                 const vert = parseFloat(this.attrs["height"]) / 6 + offset + i * 25;
                 const bottom_y = y1 + vert;
                 const dist_up = bottom_y - y2;
@@ -662,12 +662,14 @@ export class Choice extends DiagramMultiContainer {
 }
 
 export class MultipleChoice extends DiagramMultiContainer {
-    constructor(defaultIndex, type, ...items) {
+    constructor(defaultIndex, type, arrow, ...items) {
         super("g", items);
         if (!(0 <= defaultIndex && defaultIndex < items.length)) throw new Error("Invalid default index");
         if (!["up-arrow", "down-arrow"].includes(type)) throw new Error("Invalid type");
+        if (!["->", "<->"].includes(arrow)) throw new Error("Invalid arrow type");
         this.default = defaultIndex;
         this.type = type;
+        this.arrow = arrow;
         this.needsSpace = true;
         this.innerWidth = Math.max(...this.items.map(item => item.width));
         this.width = 30 + AR + this.innerWidth + AR + 20;
@@ -720,8 +722,8 @@ export class MultipleChoice extends DiagramMultiContainer {
 
         new Path(x + 30, y).right(AR).addTo(this);
         defaultItem.format(x + 30 + AR, y, this.innerWidth).addTo(this);
-        new Path(x + 30 + AR + this.innerWidth, y + this.height).right(AR).addTo(this);
-
+        new Path(x + 30 + AR + this.innerWidth, y + this.height).right(AR*3).addTo(this); //no box on the right
+        //new Path(x + 30 + AR + this.innerWidth, y + this.height).right(AR).addTo(this); // box on the right
         const below = this.items.slice(this.default + 1);
         if (below.length) {
             let distanceFromY = Math.max(10 + AR, defaultItem.height + defaultItem.down + VS + below[0].up);
@@ -730,7 +732,8 @@ export class MultipleChoice extends DiagramMultiContainer {
                 new Path(x + 30, y).down(distanceFromY - AR).arc("ws").addTo(this);
                 item.format(x + 30 + AR, y + distanceFromY, this.innerWidth).addTo(this);
                 new Path(x + 30 + AR + this.innerWidth, y + distanceFromY + item.height)
-                    .arc("se").up(distanceFromY - AR + item.height - defaultItem.height - 10).addTo(this);
+                    .arc("se").up(distanceFromY - AR + item.height - defaultItem.height).addTo(this); //no box on the right
+                    //.arc("se").up(distanceFromY - AR + item.height - defaultItem.height-10).addTo(this); // box on the right
                 const nextItem = below[i + 1];
                 if (nextItem) {
                     distanceFromY += Math.max(AR, item.height + item.down + VS + nextItem.up);
@@ -759,18 +762,39 @@ export class MultipleChoice extends DiagramMultiContainer {
             class: "diagram-text"
         }, this.type === "up-arrow" ? "⬆" : "⬇").addTo(textGroup);
 
+        // no box on the right
+        if (this.arrow === "<->") {
+            new DiagramItem("path", {
+                d: `M ${x + this.width - 20} ${y - 10} h 16 a 4 4 0 0 1 4 4 v 12 a 4 4 0 0 1 -4 4 h -16 z`,
+                class: "diagram-text",
+                style: "fill: orange"
+            }).addTo(textGroup);
+        }
+
+        /* // create a box on the right
         new DiagramItem("path", {
             d: `M ${x + this.width - 20} ${y - 10} h 16 a 4 4 0 0 1 4 4 v 12 a 4 4 0 0 1 -4 4 h -16 z`,
             class: "diagram-text",
             style: "fill: orange"
         }).addTo(textGroup);
+        */
 
-        new DiagramItem("text", {
-            x: x + this.width - 10,
-            y: y + 6,
-            class: "diagram-text"
-        }, this.type === "up-arrow" ? "⬆" : "⬇").addTo(textGroup);
+        // no box on the right
+        if (this.arrow === "<->") {
+            new DiagramItem("text", {
+                x: x + this.width - 10,
+                y: y + 6,
+                class: "diagram-text"
+            }, this.type === "up-arrow" ? "⬇" : "⬆").addTo(textGroup);
 
+        } /* // create a box on the right
+        else {
+            new DiagramItem("text", {
+                x: x + this.width - 10,
+                y: y + 6,
+                class: "diagram-text"
+            }, this.type === "up-arrow" ? "⬆" : "⬇").addTo(textGroup);
+        } */
 
         return this;
     }
@@ -847,11 +871,28 @@ export class End extends DiagramItem {
   }
 }
 
+/*
+changeType:
++ to + (NoChangeSeparate): horizontal line color is white
+. to . (NoChangeComplex): horizontal line color is gray
+
++ to . (NonRevChangeComplex): horizontal line color is gray, add green nonterminal with down arrow
+. to + (NonRevChangeSeparate): horizontal line color is gray, add red nonterminal with up arrow
+
+Rev:
++ to . (RevChangeComplex): horizontal line color is gray, add green nonterminal with two arrows
+. to + (RevChangeSeparate): horizontal line color is gray, add red nonterminal with two arrows
+
+
+
+*/
+
 export class EndWhiteSpace extends DiagramItem {
-  constructor(type = "simple") {
-    super("path");
+  constructor(changeType = null, type = "simple") {
+    super("g");
     this.type = type;
-    this.width = 10;
+    this.changeType = changeType;
+    this.width = 50;
     this.up = 10;
     this.down = 10;
     addDebug(this);
@@ -859,9 +900,44 @@ export class EndWhiteSpace extends DiagramItem {
 
   format(x, y, width) {
     if (this.type === "simple") {
-      this.attrs["d"] = `M ${x} ${y - 10} v 20 M ${x + 10} ${y - 10} v 20`;
+        if (this.changeType) {
+            if (this.changeType === "NoChangeComplex" || this.changeType === "NoChangeSeparate") {
+                const horiz = new Path(x, y).h(50);
+                horiz.attrs.style = `stroke: gray;`;
+                if (this.changeType === "NoChangeSeparate") {
+                    horiz.attrs.style = `stroke: white;`;
+                }
+                horiz.addTo(this);
+            } else {
+                const horiz1 = new Path(x, y).h(20);
+                    horiz1.attrs.style = `stroke: gray;`;
+                    horiz1.addTo(this);
+                const horiz2 = new Path(x+30, y).h(20);
+                    horiz2.attrs.style = `stroke: gray;`;
+                    horiz2.addTo(this);
+                let term = null;
+                if (this.changeType === "NonRevChangeComplex") {
+                    term = new NonTerminal("⬇", { box_color: "limegreen" });
+                } else if (this.changeType === "NonRevChangeSeparate"){
+                    term = new NonTerminal("⬆" , { box_color: "red" });
+                } else if (this.changeType === "RevChangeComplex") {
+                    term = new NonTerminal("⬇⬆", { box_color: "limegreen" });
+                } else if (this.changeType === "RevChangeSeparate"){
+                    term = new NonTerminal("⬆⬇", { box_color: "red" });
+                }
+                term.width *= 0.75;
+                term.format(x+18, y, 15).addTo(this);
+            }
+        } else {
+            const horiz = new Path(x, y).h(50);
+                horiz.attrs.style = `stroke: gray;`;
+                horiz.addTo(this);
+        }
+      const vert1 = new Path(x, y - 10).v(20).addTo(this);
+      const vert2 = new Path(x + 50, y - 10).v(20).addTo(this);
+
     } else if (this.type === "complex") {
-      this.attrs["d"] = `M ${x + 20} ${y - 10} v 20`;
+      new Path(x + 20, y - 10).v(20).addTo(this);
     }
     return this;
   }
@@ -992,7 +1068,7 @@ export class Terminal extends DiagramItem {
                         const arrow = {
                             nrbroken: "⬆",
                             nradded: "⬇",
-                            radded: "⬆⬇",
+                            radded: "⬇⬆",
                             rbroken: "⬆⬇"
                         }[this.bond_type];
 
@@ -1000,8 +1076,15 @@ export class Terminal extends DiagramItem {
                             const up = new NonTerminal(this.bond_num, { box_color: "white" });
                             const up_height = up.up + up.down - 2;
                             
+                            let arrow_color = null;
+                            if (this.bond_type === "nrbroken" || this.bond_type === "rbroken") {
+                               arrow_color = "red";
+                            }
+                            if (this.bond_type === "nradded" || this.bond_type === "radded") {
+                               arrow_color = "limegreen";
+                            }
 
-                            const down = new NonTerminal(arrow, { box_color: "orange" });
+                            const down = new NonTerminal(arrow, { box_color: arrow_color });
                             if (this.bond_type === "nrbroken" || this.bond_type === "nradded") {
                                 down.width *= 0.75;
                                 up.width *= 0.75;
@@ -1172,16 +1255,20 @@ export class NonTerminal extends DiagramItem {
                 if (this.state_and_bond_wrap) {
                 const arc_start = x - AR;
                 const arc_height = AR * 1.5;
+
+                const isUnknownBond = this.bond_num === "?";
+                const strokeStyle = isUnknownBond ? "stroke: gray; stroke-dasharray: 4,2" : "stroke: black";
+
                 const path1 = new Path(arc_start, y - AR / 2)
                     .down(arc_height*4).arc("ws").right(width / 2 - AR).arc("ne");
                 path1.attrs.class = "bottom-bind";
-                path1.attrs.style = "stroke: black";
+                path1.attrs.style = strokeStyle;
                 path1.addTo(this);
 
                 const path2 = new Path(x + AR + width, y - AR / 2)
                     .down(arc_height*4).arc("es").left(width / 2 - AR).arc("nw");
                 path2.attrs.class = "bottom-bind";
-                path2.attrs.style = "stroke: black";
+                path2.attrs.style = strokeStyle;
                 path2.addTo(this);
                 this._bond_arc_bottom_y = y - AR /2 + arc_height * 4 + AR * 2;
                 }
@@ -1209,7 +1296,7 @@ export class NonTerminal extends DiagramItem {
                     let cx = 0, cy = 0;
                     if (this.bond_type === "circle") {
                         cx = x + width / 2;
-                        cy = y + this.height + AR * 4;
+                        cy = (this._bond_arc_bottom_y+8) || (y + this.height + AR * 4);
                         const term = new NonTerminal(this.bond_num, { box_color: "white" });
                         term.width *= 0.78;
                         term.format(cx - term.width / 2, cy, term.width).addTo(this);
@@ -1220,7 +1307,7 @@ export class NonTerminal extends DiagramItem {
                         const arrow = {
                             nrbroken: "⬆",
                             nradded: "⬇",
-                            radded: "⬆⬇",
+                            radded: "⬇⬆",
                             rbroken: "⬆⬇"
                         }[this.bond_type];
 
@@ -1228,7 +1315,15 @@ export class NonTerminal extends DiagramItem {
                             const up = new NonTerminal(this.bond_num, { box_color: "white" });
                             const up_height = up.up + up.down - 2;
                     
-                            const down = new NonTerminal(arrow, { box_color: "orange" });
+                            let arrow_color = null;
+                            if (this.bond_type === "nrbroken" || this.bond_type === "rbroken") {
+                               arrow_color = "red";
+                            }
+                            if (this.bond_type === "nradded" || this.bond_type === "radded") {
+                               arrow_color = "limegreen";
+                            }
+
+                            const down = new NonTerminal(arrow, { box_color: arrow_color });
                             if (this.bond_type === "nrbroken" || this.bond_type === "nradded") {
                                 down.width *= 0.75;
                                 up.width *= 0.75;

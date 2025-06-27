@@ -26,8 +26,11 @@ export function joinLines(lines) {
 
 export function moleculeSiteDict(lines) {
     const dict = {};
-    for (const line of lines) {
-        if (line.startsWith('#') || !line.includes('(')) continue;
+    for (let line of lines) {
+        if (line.startsWith('#') || !line) continue;
+        if (!line.includes('(')) {
+            line = MalformedMolecules(line);
+        }
         const match = line.match(/(\w+)\((.*?)\)/);
         if (!match) continue;
         const [_, mol, sitesBlock] = match;
@@ -35,6 +38,12 @@ export function moleculeSiteDict(lines) {
         dict[mol] = sites;
     }
     return dict;
+}
+
+function MalformedMolecules(line) {
+    line = line.split(/\s+/)[0].trim();
+    const newline = line + '()';
+    return newline;
 }
 
 export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLString) {
@@ -74,7 +83,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
         `Object.assign(document.createElement("h2"), { textContent: "${moleculesLabel}" })` +
     ');'
     );
-    for (const line of moleculeLines) {
+    for (let line of moleculeLines) {
             if (!line) continue;
 
             if (line.startsWith('#')) {
@@ -82,13 +91,20 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 if (showComments) {
                     output.push(
                     'document.getElementById("diagramArea").appendChild(' +
-                        `Object.assign(document.createElement("small"), { textContent: "${lastComment}" })` +
+                        `Object.assign(document.createElement("small"), { textContent: ${JSON.stringify(lastComment)} })` +
                     ');');
                 }
                 continue;
             }
+            if (line.includes('#')) {
+                line = line.split('#')[0].trim();
+            }
+            if (!line) continue;
         if (!line.startsWith('#')) {
-            output.push(bnglToRailroad(line, null, null, molSiteDict, showBNGLString));
+            if (!line.includes('(')) {
+                line = MalformedMolecules(line);
+            }
+            output.push(bnglToRailroad(line, null, null, molSiteDict, showBNGLString, null, null));
         }
     }
 
@@ -108,15 +124,21 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 if (showComments) {
                     output.push(
                     'document.getElementById("diagramArea").appendChild(' +
-                        `Object.assign(document.createElement("small"), { textContent: "${lastComment}" })` +
+                        `Object.assign(document.createElement("small"), { textContent: ${JSON.stringify(lastComment)} })` +
                     ');');
                 }
                 continue;
             }
-            const parts = line.split(/\s+/);
+            let parts = line.split(/\s+/);
+            if (!parts.includes('(')) {
+                if (molSiteDict.hasOwnProperty(parts[0])) {
+                    parts = MalformedMolecules(parts.join(' ')).split(/\s+/);
+                }
+            }
             let species = parts.find(p => p.includes('(') && p.includes(')')) || '';
             if (species.includes(':')) species = species.split(':')[1];
-            if (species) output.push(bnglToRailroad(species, null, null, molSiteDict, showBNGLString));
+
+            if (species) output.push(bnglToRailroad(species, null, null, molSiteDict, showBNGLString, null, null));
         }
     }
 
@@ -135,11 +157,12 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 if (showComments) {
                     output.push(
                     'document.getElementById("diagramArea").appendChild(' +
-                        `Object.assign(document.createElement("small"), { textContent: "${lastComment}" })` +
+                        `Object.assign(document.createElement("small"), { textContent: ${JSON.stringify(lastComment)} })` +
                     ');');
                 }
                 continue;
             }
+            if (/([=<>]=?|==)\s*\d+(\.\d+)?/.test(line)) continue;
             const parts = line.split(/\s+/);
 
             let expr = ' ';
@@ -149,16 +172,19 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 expr = parts.slice(2).join(' ')
             }
             if (expr.includes(':')) expr = expr.split(':')[1];
-            if (expr.includes("), ")) {
-                expr = expr.split(", ")
-                for (const subExpr of expr) {
+            if (expr.includes('#')) {
+                expr = expr.split('#')[0].trim();
+            }
+            if (/\),\s*/.test(expr)) {
+                const exprParts = expr.split(/\),\s*/).map(e => e.trim() + ')').filter(e => e !== ')');
+                for (const subExpr of exprParts) {
                     const trimmed = subExpr.trim();
                     const expanded = expandExpr(trimmed, molSiteDict);
-                    output.push(bnglToRailroad(expanded, trimmed, null, molSiteDict, showBNGLString));
+                    output.push(bnglToRailroad(expanded, trimmed, null, molSiteDict, showBNGLString, null, null));
                 }
             } else {
             const expanded = expandExpr(expr, molSiteDict);
-            output.push(bnglToRailroad(expanded, expr, null, molSiteDict, showBNGLString));
+            output.push(bnglToRailroad(expanded, expr, null, molSiteDict, showBNGLString, null, null));
             }
         }
     }
@@ -179,7 +205,7 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 if (showComments) {
                     output.push(
                     'document.getElementById("diagramArea").appendChild(' +
-                        `Object.assign(document.createElement("small"), { textContent: "${lastComment}" })` +
+                        `Object.assign(document.createElement("small"), { textContent: ${JSON.stringify(lastComment)} })` +
                     ');');
                 }
                 continue;
@@ -206,10 +232,30 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
             let reactants_str = parts[0].trim();
             let products_str = parts[1].trim();
 
+            let display_r = [];
+            let r_display_str = "";
+            let expandedLHS = "";
             const stripped_r = [];
             const reactants = reactants_str.split(/(?<!!)\+/);
             for (let part of reactants) {
                 part = part.trim();
+                if (!part.includes('(')) {
+                    if (molSiteDict.hasOwnProperty(part)) {
+                        part = MalformedMolecules(part);
+                    }
+                }
+                if (part.includes('.')) {
+                    let splitparts = part.split('.').map(p => {
+                        if (!p.includes('(')) {
+                            if (molSiteDict.hasOwnProperty(p)) {
+                                const fixed = MalformedMolecules(p);
+                                return fixed;
+                            }
+                        }
+                        return p;
+                    });
+                    part = splitparts.join('.');
+                }
                 const endIdx = part.lastIndexOf(")");
                 if (endIdx !== -1) {
                     part = part.slice(0, endIdx + 1);
@@ -217,14 +263,59 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 if (part.includes(':')) {
                     part = part.split(':')[1];
                 }
-                stripped_r.push(part);
+                display_r.push(part);
+                expandedLHS = expandExpr(part, molSiteDict);
+                stripped_r.push(expandedLHS);
             }
             reactants_str = stripped_r.join(' + ');
+            r_display_str = display_r.join(' + ');
 
+            // Remove rate expressions with * or /
+            const multPattern = /\s+[a-zA-Z_]\w*\s*\*\s*[a-zA-Z_]\w+.*$/;
+            if (multPattern.test(products_str)) {
+                products_str = products_str.split(multPattern)[0].trim();
+            }
+            const slashPattern = /\s*[a-zA-Z_]\w*\/[a-zA-Z_]\w+/;
+            if (slashPattern.test(products_str)) {
+                products_str = products_str.split(slashPattern)[0].trim();
+            }
+            // Remove rate expressions with +
+            const addPattern = /\b[a-zA-Z_]\w*\b\s*\+\s*\b[a-zA-Z_]\w*\b\s*\*\s*\b[a-zA-Z_]\w*\b/;
+            if (addPattern.test(products_str)) {
+                products_str = products_str.split(addPattern)[0].trim();
+            }
+            // Remove rate expressions with parentheses
+            const ratePattern = /\(+[\w.]+\s*\*\s*[\w.]+/;
+            if (ratePattern.test(products_str)) {
+                products_str = products_str.split(ratePattern)[0].trim();
+            }
+
+            let display_p = [];
+            let p_display_str = "";
+            let expandedRHS = "";
             const stripped_p = [];
             const products = products_str.split(/(?<!!)\+/);
             for (let part of products) {
                 part = part.trim();
+                if (!part.includes('(')) {
+                    part = part.split(/\s+/)[0].trim();
+                    if (molSiteDict.hasOwnProperty(part)) {
+                        part = MalformedMolecules(part);
+                    }
+                }
+                if (part.includes('.')) {
+                    let splitparts = part.split('.').map(p => {
+                        if (!p.includes('(')) {
+                            p = p.split(/\s+/)[0].trim();
+                            if (molSiteDict.hasOwnProperty(p)) {
+                                const fixed = MalformedMolecules(p);
+                                return fixed;
+                            }
+                        }
+                        return p;
+                    });
+                    part = splitparts.join('.');
+                }
                 const endIdx = part.lastIndexOf(")");
                 if (endIdx !== -1) {
                     part = part.slice(0, endIdx + 1);
@@ -232,24 +323,26 @@ export async function parseBNGLFile(fileText, useBNGL, showComments, showBNGLStr
                 if (part.includes(':')) {
                     part = part.split(':')[1];
                 }
-                stripped_p.push(part);
+                display_p.push(part);
+                expandedRHS = expandExpr(part, molSiteDict);
+                stripped_p.push(expandedRHS);
             }
             products_str = stripped_p.join(' + ');
+            p_display_str = display_p.join(' + ');
 
-            const expandedLHS = expandExpr(reactants_str.replace(/ \+ /g, '.'), molSiteDict);
-            const expandedRHS = expandExpr(products_str.replace(/ \+ /g, '.'), molSiteDict);
-
-            if (!expandedLHS.includes('(') || !expandedRHS.includes('(')) {
-                console.warn("⚠️ Skipping malformed reaction:", reactants_str, arrow, products_str);
+            if (!products_str.includes('(') || !reactants_str.includes('(')) {
+                console.warn("⚠️ Skipping malformed reaction:", r_display_str, arrow, p_display_str);
                 continue;
             }
-
-            const display = `${reactants_str} ${arrow} ${products_str}`;
-            const changes = compareReactions(expandedLHS, expandedRHS, arrow, molSiteDict);
+            
+            const display = `${r_display_str} ${arrow} ${p_display_str}`;
+            const {changes, complexChanges} = compareReactions(reactants_str, products_str, arrow, molSiteDict);
+    
             if (changes) {
-            output.push(bnglToRailroad(expandedLHS, display, changes, molSiteDict, showBNGLString));}
+            reactants_str = reactants_str.replace(/ \+ /g, '.');
+            output.push(bnglToRailroad(reactants_str, display, changes, molSiteDict, showBNGLString, arrow, complexChanges));} 
         }
-    }
+    } 
 
     return output.join('\n');
 }

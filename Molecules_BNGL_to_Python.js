@@ -1,6 +1,7 @@
 // Molecules_BNGL_to_Python.js
 
-export function bnglToRailroad(bnglString, displayString = null, changesDict = null, molSiteDict = {}, showBNGLString) {
+export function bnglToRailroad(bnglString, displayString = null, changesDict = null, molSiteDict = {}, showBNGLString, arrow = null, complexChanges = null) {
+    if (!changesDict) changesDict = {};
     const MoleculeColor = 'lightgreen';
     const SiteColor = 'lightblue';
     const StateColor = 'khaki';
@@ -12,6 +13,13 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
     const stateChangeUp = "change from bottom state to top state";
     const stateChangeDown = "change from top state to bottom state";
     const bindAndStateChange = "bind_and_state_change";
+
+    const NoChangeComplex = "NoChangeComplex";
+    const NoChangeSeparate = "NoChangeSeparate";
+    const NonRevChangeComplex = "NonRevChangeComplex";
+    const NonRevChangeSeparate = "NonRevChangeSeparate";
+    const RevChangeComplex = "RevChangeComplex";
+    const RevChangeSeparate = "RevChangeSeparate";
 
     const molChunks = bnglString.split('.');
     const label = showBNGLString ? (displayString || bnglString).trim() : " ";
@@ -38,7 +46,7 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
             return; // skip site processing
         }
 
-        const sites = siteBlock.split(',').map(s => s.trim());
+        const sites = siteBlock.split(',').map(s => s.trim()).filter(s => s);
 
         // Build per-molecule-instance map of site name counts
         const siteNameCounts = {};
@@ -61,6 +69,13 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
             if (site.includes('~')) {
                 const parts = site.split('~');
                 siteName = parts[0];
+                
+                let index = siteNameIndex[siteName] || 0;
+                const indexedKey = `${moleculeInstance}:${siteName}[${index}]`;
+                const unindexedKey = `${moleculeInstance}:${siteName}`;
+                const siteKey = (changesDict && changesDict[indexedKey]) ? indexedKey : unindexedKey;
+                siteNameIndex[siteName] = index + 1;
+
                 states = parts.slice(1);
                 const finStates = [];
 
@@ -69,6 +84,7 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                     bondNumArg = "";
                     bondTypeArg = "";
                     let stateName = state;
+                    const changes = changesDict[siteKey];
 
                     if (state.includes("!")) {
                         const splitState = state.split("!");
@@ -89,14 +105,7 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                             bondNumArg = `, bond_num: \"${bondNum}\"`;
                         }
 
-                        if (changesDict) {
-                            let siteKey = `${moleculeInstance}:${siteName}`;
-                            if (siteNameCounts[siteName] > 1) {
-                                const index = siteNameIndex[siteName] || 0;
-                                siteKey = `${siteKey}[${index}]`;
-                                siteNameIndex[siteName] = index + 1;
-                            }
-                            const changes = changesDict[siteKey];
+                        
                             if (changes && changes.change.some(c => [bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev].includes(c))) {
                                 const bondChange = changes.change.find(c => [bondAddedNonRev, bondRemovedNonRev, bondAddedRev, bondRemovedRev].includes(c));
                                 bondTypeArg = `, bond_type: \"${bondChange}\"`;
@@ -106,18 +115,9 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                                     bondNumArg = `, bond_num: \"${numArg}\"`;
                                 }
                             }
-                        }
+                        
                         state = stateName;
                     }
-
-                    if (changesDict) {
-                        let siteKey = `${moleculeInstance}:${siteName}`;
-                        if (siteNameCounts[siteName] > 1) {
-                            const index = siteNameIndex[siteName] || 0;
-                            siteKey = `${siteKey}[${index}]`;
-                            siteNameIndex[siteName] = index + 1;
-                        }
-                        const changes = changesDict[siteKey];
                         if (changes && (changes.change.includes(stateChangeUp) || changes.change.includes(stateChangeDown))) {
                             const direction = changes.change.includes(stateChangeDown) ? "down-arrow" : "up-arrow";
                             const reactantState = changes.reactant.split("~").slice(-1)[0].split("!")[0];
@@ -144,13 +144,11 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
                                 const match = s === state ? `${bondArg}${bondNumArg}${bondTypeArg}` : "";
                                 return `new NonTerminal(\"${s}\", { box_color: \"${StateColor}\"${match}${extraLayoutArg} })`;
                             });
-                            finStates.push(`new MultipleChoice(0, \"${direction}\", ${allStates.join(", ")})`);
+                            finStates.push(`new MultipleChoice(0, \"${direction}\", \"${arrow}\", ${allStates.join(", ")})`);
                         } else {
                             finStates.push(`new NonTerminal(\"${state}\", { box_color: \"${StateColor}\"${bondArg}${bondNumArg}${bondTypeArg} })`);
                         }
-                    } else {
-                        finStates.push(`new NonTerminal(\"${state}\", { box_color: \"${StateColor}\"${bondArg}${bondNumArg}${bondTypeArg} })`);
-                    }
+                    
                 });
 
                 const stateChoices = finStates.join(", ");
@@ -195,7 +193,12 @@ export function bnglToRailroad(bnglString, displayString = null, changesDict = n
         });
 
         if (idx < molChunks.length - 1) {
-            diagrams.push("        new EndWhiteSpace(),");
+            if (complexChanges) {
+                const complexChange = complexChanges[idx]
+                diagrams.push(`        new EndWhiteSpace(\'${complexChange}\'),`);
+            } else {
+                diagrams.push("        new EndWhiteSpace(),");
+            }
         }
     });
 
