@@ -3,14 +3,57 @@
 This package is designed to convert BioNetGen Language (BNGL) strings into visual railroad diagrams to represent biological networks and reaction mechanisms. The `bngl_parser.js` module preprocesses strings from BNGL code files. `Molecules_BNGL_to_Python.js` is designed to take these parsed BNGL strings and translate them into formatted diagram code to be drawn by railroad diagram classes. `railroad2.js` is a railroad-diagram renderer that reads the diagram code and generates the SVG railroad visualization. These diagrams show molecular interactions by highlighting sites, states, bonds, and changes through reactions. 
 
 ## bngl_parser.js
-- Parses BNGL files line by line to identify sections such as molecule types, species, observables, and reaction rules.
-- Extracts, cleans, and standardizes the BNGL code for proper formatting.
+- Parses BNGL files line by line to extract sections such as molecule types, species, observables, and reaction rules.
+- Cleans BNGL code to ensure proper formatting by stripping comments, extra whitespace, trailing functions or parameters, and malformed lines.
+- Standardizes code by merging multiline expressions and fixing malformed molecule patterns that lack parentheses.
 - Sends the cleaned BNGL strings to `expanded.js` to fully expand molecule/site definitions and `compare_reactions.js` to detect and return changes across reactions.
 - Passes expanded BNGL strings and dictionary with reaction changes to BNGl-railroad converter.
 
+## expanded.js
+Expands shortened molecule patterns, as in observables and reaction rules, into their full forms using molSiteDict, which stores all molecules in a given BNGL file and their sites/states.
+- Input: a BNGL string and a molecule-site dictionary (molSiteDict)
+- Functions: 
+  - Fills in missing sites, states, and bond arguments when only partial information is given.
+  - Resolves inconsistent ordering of sites within a molecule to match with original order in molecule type definition
+  - Properly handles and expands sites with the same name.
+- Output: returns a fully "expanded" BNGL string for accurate visualization and comparison.
+
+Example: EGFR(tmd!+,y1068~u) returns EGFR(ecd!?,tmd!+,y1068~u!-,y1173~u~p!?) given the molecule EGFR(ecd,tmd,y1068~u~p,y1173~u~p)
+
+## compare_reactions.js
+Detects bond and state changes between reactants and products and stores the changes in a dictionary to display a reaction rule in a single diagram.
+- Input: expanded versions of reactant and product strings, the reaction arrow (either -> or <->), and molecule-site dictionary (molSiteDict)
+- compareReactions Functions:
+  - Analyzes differences between the expanded left-hand side (reactants) and expanded right-hand side (products) of a reaction rule.
+  - Tracks changes like bond addition, bond breakage, state transitions, the type of reaction (reversible or nonreversible), and their respective molecules, sites, and states.
+  - Stores changes with notes like:
+    - "radded" / "nradded" (bond added)
+    - "rbroken" / "nrbroken" (bond broken)
+    - "change from bottom state to top state" / "change from top state to bottom state"
+- Output: a changesDict that matches molecules, sites, and states to the type of change they undergo.
+```javascript
+changesDict[siteKey] = {
+                molecule: rmol,
+                site: rsite,
+                reactant: rRaw,
+                product: pRaw,
+                change: change,
+            };
+```
+- compareComplexSeparation Functions:
+  - Goes through expanded reactants and expanded products, and stores the order of separators (either + for molecules in separate complexes or . for molecules in the same complex)
+  - Analyzes differences between the orders of separators and stores each comparison in a list:
+    - "NoChangeComplex" / "NoChangeSeparate" (no association/dissociation)
+    - "NonRevChangeComplex" / "NonRevChangeSeparate" (nonreversible association/dissociation)
+    - "RevChangeComplex" / "RevChangeSeparate" (reversible association/dissociation)
+- Output: a list with all changes that will be inserted between each molecule in a diagram.
+
 ## Molecules_BNGL_to_Python.js
 
-Breaks BNGL string into components to write diagram code that includes molecules, sites, states, bonds, and changes from reactions (e.g., state transitions or binding/unbinding). Inserts diagram elements (e.g. Choice, Sequence, Terminal), applies notes for state or bond changes, and returns JavaScript-formatted string for rendering by `railroad2.js`
+Breaks BNGL string into components to write diagram code that includes molecules, sites, states, bonds, and changes from reactions (e.g., state transitions or binding/unbinding). Inserts diagram elements (e.g., Choice, Sequence, Terminal), applies notes for state or bond changes, and returns a string of JavaScript code for rendering by `railroad2.js`
+```javascript
+"new Choice(0, new Comment(\"    \"), new Sequence(new Terminal(\"y1068\", { box_color: \"lightblue\" }"
+```
 
 ### Key Parameters:
 
