@@ -266,7 +266,7 @@ for line in species_lines:
         converted_species.append(bngl_to_railroad(species))
 
 # expand observables
-from _expanded import expand_expr
+from expanded import expand_expr
 
 # process observables
 begin_obs = None
@@ -364,12 +364,8 @@ for line in reaction_lines:
 
     display_string = f'{reactants_str} {arrow} {products_str}'
 
-    print(reactants_str)
-    print(products_str)
     expanded_reactants = expand_expr(reactants_str.replace(" + ", "."), mol_site_dict)
     expanded_products = expand_expr(products_str.replace(" + ", "."), mol_site_dict)
-    print("reactants:", expanded_reactants)
-    print("products:", expanded_products)
 
     # reaction rules
     from compare_reactions import *

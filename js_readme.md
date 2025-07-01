@@ -1,0 +1,109 @@
+## Overview
+
+This package is designed to convert BioNetGen Language (BNGL) strings into visual railroad diagrams to represent biological networks and reaction mechanisms. The `bngl_parser.js` module preprocesses strings from BNGL code files. `Molecules_BNGL_to_Python.js` is designed to take these parsed BNGL strings and translate them into formatted diagram code to be drawn by railroad diagram classes. `railroad2.js` is a railroad-diagram renderer that reads the diagram code and generates the SVG railroad visualization. These diagrams show molecular interactions by highlighting sites, states, bonds, and changes through reactions. 
+
+## bngl_parser.js
+- Parses BNGL files line by line to identify sections such as molecule types, species, observables, and reaction rules.
+- Extracts, cleans, and standardizes the BNGL code for proper formatting.
+- Sends the cleaned BNGL strings to `expanded.js` to fully expand molecule/site definitions and `compare_reactions.js` to detect and return changes across reactions.
+- Passes expanded BNGL strings and dictionary with reaction changes to BNGl-railroad converter.
+
+## Molecules_BNGL_to_Python.js
+
+Breaks BNGL string into components to write diagram code that includes molecules, sites, states, bonds, and changes from reactions (e.g., state transitions or binding/unbinding). Inserts diagram elements (e.g. Choice, Sequence, Terminal), applies notes for state or bond changes, and returns JavaScript-formatted string for rendering by `railroad2.js`
+
+### Key Parameters:
+
+- `bnglString` (String): The BNGL-formatted input string representing molecules and their interactions.
+- `displayString` (String, optional): Alternative display label for the diagram; defaults to `null`.
+- `changesDict` (Object, optional): Dictionary indicating changes such as bonds formed/broken and state transitions. Default is `null`.
+- `molSiteDict` (Object, optional): Dictionary containing molecule-specific site information; default is an empty object `{}`.
+- `arrow` (String, optional): Symbol representing reversible or nonreversible reaction changes (e.g., -> or <->).
+- `complexChanges` (Array, optional): Array indicating whether molecules remain in the same complex or switch (e.g., dissociation or reassociation). Default is `null`
+
+### Diagram Elements:
+The generated railroad diagrams visually represent BNGL components using customizable color-coded elements:
+```javascript
+const MoleculeColor = 'lightgreen';
+const SiteColor = 'lightblue';
+const StateColor = 'khaki';
+```
+- **Molecules**: Colored rounded-boxes labeled with molecule names.
+- **Sites**: Colored rounded-boxes representing specific binding sites within molecules.
+- **States**: Colored boxes indicating specific states of sites (e.g., ~P, ~Y).
+
+**Reaction Changes**: Indicators for molecular changes as a result of reactions, including:
+```javascript
+const stateChangeUp = "change from bottom state to top state";
+const stateChangeDown = "change from top state to bottom state";
+const bondAddedNonRev = "nradded";
+const bondRemovedNonRev = "nrbroken";
+const bondAddedRev = "radded";
+const bondRemovedRev = "rbroken";
+const bindAndStateChange = "bind_and_state_change";
+```
+  - State changes (transition from one state to another)
+  - Non-reversible bonds (nradded, nrbroken)
+  - Reversible bonds (radded, rbroken)
+  - Combined state and bond changes (bind_and_state_change)
+
+**Complex Changes**: Indicators for changes between molecules in the same VS separate complex
+```javascript
+const NoChangeComplex = "NoChangeComplex";
+const NoChangeSeparate = "NoChangeSeparate";
+const NonRevChangeComplex = "NonRevChangeComplex";
+const NonRevChangeSeparate = "NonRevChangeSeparate";
+const RevChangeComplex = "RevChangeComplex";
+const RevChangeSeparate = "RevChangeSeparate";
+```
+  - Molecules stay in their original (separate or same) complex (NoChangeComplex, NoChangeSeparate)
+  - Non-reversible switch between same/separate complex (NonRevChangeComplex, NonRevChangeSeparate)
+  - Reversible switch between same/separate complex (RevChangeComplex, RevChangeSeparate)
+
+## railroad2.js
+This module is a customized SVG-based renderer that defines layout classes to read the formatted diagram code and draw the related railroad diagram showing molecule and site structure, bond connectivity, binding/unbinding and state transitions, complex changes, and other styling components.
+
+### Components
+Diagram()
+* Its arguments are the components of the diagram (e.g., Diagram(Choice(), Terminal())...)
+
+`Terminal(text[, {box_color, bottom_bind, bottom_bind_color, bond_num, bond_type, wrap}])`
+* All the properties in the options bag are optional
+* `box_color` specifies the color to fill the container
+* `bottom_bind` specifies possible bond connection (e.g, "!?" or "!+")
+* `bottom_bind_color` passes the color of the bond connection (e.g., "gray")
+* `bond_num` passes the bond argument (e.g., "?", "+", "4")
+* `bond_type` specifies a bond change (e.g., "radded")
+* `wrap` specifies if the bond wrap around all states
+
+`NonTerminal(text[, {box_color, bottom_bind, bottom_bind_color, bond_num, bond_type, wrap}])`
+  * The optional arguments have the same meaning as for Terminal,
+    except it visualizes as a rectangular box rather than a rounded-rectangle
+
+`Skip()` - an empty line
+
+`Comment(text[, {href, title, cls}])` - a comment.
+* `href` makes the text a hyperlink with the given URL
+* `title` adds an SVG `<title>` element to the element, giving it "hover text" and a description for screen-readers and other assistive tech
+* `cls` is additional classes to apply to the element, beyond the default
+
+`Start({type, label})` and `End({type})` - the start/end shapes. 
+* Shapes are supplied by default.
+* All properties are optional.
+* `type` takes either "simple" (the default) or `"complex"` for slightly different start/end shapes
+* `label` provides a text label before the diagram starts
+
+`EndWhiteSpace(changeType, type)` - separator between molecules
+* All properties are optional.
+* `changeType` specifies a switch between molecules in the same complex or separate complexes
+* `type` argument has the same meaning as for Start and End.
+
+### Containers
+`Sequence(...children)` - Arranges all arguments on the same horizontal line, one after another.
+
+`Choice(index, ...children)` - Arranges arguments on different vertical levels to represent mutually exclusive options. The index specifies the default (middle) choice.
+
+`MultipleChoice(index, type, arrow, ...children)` - it's similar to Choice, but used to show state changes.
+* `index` specifies the default middle choice.
+* `type` specifies whether the state changes from a top state to a bottom state or vice versa.
+* `arrow` is either -> or <-> to specify whether the transition is reversible or non-reversible
