@@ -1,8 +1,0 @@
-secrets.json
-*.egg-info
-.idea
-*.iml
-*.pyc
-/dist
-/build
-#test.html
