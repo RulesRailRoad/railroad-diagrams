@@ -1,23 +1,20 @@
 {
   "name": "railroad-diagrams",
   "version": "1.1.0",
-  "description": "A small JS+SVG library for drawing railroad syntax diagrams.",
-  "main": "railroad-diagrams.js",
+  "description": "A JS+SVG library for drawing railroad diagrams for molecular interactions and rules from BioNetGen Language code.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tabatkins/railroad-diagrams.git"
+    "url": "https://github.com/RulesRailRoad/railroad-diagrams.git"
   },
   "keywords": [
     "railroad",
-    "syntax",
     "diagrams",
-    "grammar",
     "svg"
   ],
-  "author": "Tab Atkins Jr.",
+  "contributors": [
+    "Michael L. Blinov", 
+    "Reesha Patel"
+  ],
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/tabatkins/railroad-diagrams/issues"
-  },
-  "homepage": "https://github.com/tabatkins/railroad-diagrams"
+  "homepage": "https://github.com/RulesRailRoad/railroad-diagrams"
 }
